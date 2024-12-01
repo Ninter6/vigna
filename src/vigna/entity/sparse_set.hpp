@@ -100,10 +100,10 @@ public:
 
     virtual ~basic_sparse_set() = default;
 
-    size_t size() const { return packed_.size(); }
-    bool empty() const { return packed_.empty(); }
+    [[nodiscard]] virtual size_t size() const { return packed_.size(); }
+    [[nodiscard]] virtual bool empty() const { return packed_.empty(); }
 
-    size_t capacity() const { return packed_.capacity(); }
+    [[nodiscard]] size_t capacity() const { return packed_.capacity(); }
     void reserve(size_t size) { packed_.reserve(size); }
     void shrink_to_fit() { packed_.shrink_to_fit(); }
 

@@ -297,7 +297,7 @@ public:
     [[nodiscard]] const_iterator end() const { return begin() + length_; }
     // [[nodiscard]] auto rbegin() { return std::make_reverse_iterator(end()); }
     // [[nodiscard]] auto rend() { return std::make_reverse_iterator(begin()); }
-    [[nodiscard]] auto rbegin() const { return std::make_reverse_iterator(end());; }
+    [[nodiscard]] auto rbegin() const { return std::make_reverse_iterator(end()); }
     [[nodiscard]] auto rend() const { return std::make_reverse_iterator(begin()); }
     [[nodiscard]] const_iterator cbegin() const { return begin(); }
     [[nodiscard]] const_iterator cend() const { return end(); }
