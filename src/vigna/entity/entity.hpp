@@ -120,16 +120,12 @@ struct entity_traits : detail::entity_traits<T> {
         return n;
     }
 
-    static constexpr entity_type next(entity_type entity) {
-        return construct(next_id(entity), next_version(entity));
-    }
-
-    static constexpr entity_type add_id(entity_type entity) {
-        return construct(next_id(entity), version(entity));
+    static constexpr void reid(entity_type& entity, id_type id) {
+        entity = construct(id, version(entity));
     }
     
-    static constexpr entity_type add_version(entity_type entity) {
-        return construct(id(entity), next_version(entity));
+    static constexpr void reversion(entity_type& entity, version_type version) {
+        entity = construct(id(entity), version);
     }
 };
 

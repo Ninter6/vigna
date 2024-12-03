@@ -11,6 +11,7 @@
 #include <cassert>
 #include <algorithm>
 #include <functional>
+#include <strings.h>
 
 namespace vigna {
 
@@ -68,7 +69,7 @@ class basic_sparse_set {
     }
 
 protected:
-    void swap_and_pop(size_t index) {
+    virtual void swap_and_pop(size_t index) {
         assert(index < packed_.size());
         isolate(id(packed_[index]));
         if (index != packed_.size() - 1) {
@@ -90,9 +91,15 @@ protected:
         std::swap(packed_[a], packed_[b]);
     }
 
+    void reversion(size_t index, version_type version) {
+        traits::reversion(packed_[index], version);
+    }
+
 public:
     using iterator = typename packed_container::const_iterator;
     using const_iterator = iterator;
+    using reverse_iterator = typename packed_container::const_reverse_iterator;
+    using const_reverse_iterator = reverse_iterator;
 
     basic_sparse_set() = default;
     basic_sparse_set(const basic_sparse_set&) = delete;
@@ -107,54 +114,58 @@ public:
     void reserve(size_t size) { packed_.reserve(size); }
     void shrink_to_fit() { packed_.shrink_to_fit(); }
 
-    iterator emplace(id_type id, version_type version = 0) {
+    std::pair<iterator, bool> emplace(id_type id, version_type version) {
         return push(traits::construct(id, version));
     }
-    iterator emplace() {
-        return push(traits::construct(size(), 0));
+    std::pair<iterator, bool> emplace(const T& value) {
+        return push(value);
     }
 
-    iterator push(const T& value) {
-        if (contains(value)) return end();
+    std::pair<iterator, bool> push(const T& value) {
+        if (auto it = find(value); it != end())
+            return {it, false};
         auto index = packed_.size();
         packed_.push_back(value);
         sparse_emplace(id(value), index);
-        return begin(index);
+        return {begin(index), true};
     }
 
-    void erase(const iterator& it) {
+    virtual void erase(const iterator& it) {
         auto index = std::distance(packed_.cbegin(), it);
         swap_and_pop(index);
     }
 
-    void erase(const iterator& first, const iterator& last) {
+    virtual void erase(iterator first, iterator last) {
         assert(last >= first);
         while (last != first) erase(--last);
     }
 
-    void erase(const T& value) {
+    virtual void erase(const T& value) {
         pop(value);
     }
 
-    void clear() {
+    virtual void clear() {
         for (auto&& i : packed_)
             isolate(id(i));
         packed_.clear();
     }
 
-    void pop(const T& value) {
-        erase(find(value));
+    virtual void pop(const T& value) {
+        if (auto index = find_index(value); index != null)
+            swap_and_pop(index);
     }
 
+    // ReSharper disable once CppHiddenFunction
     const_iterator find(const T& value) const {
         auto index = find_index(value);
         return index != null ? begin(index) : end();
     }
 
-    bool contains(const T& value) const {
+    virtual bool contains(const T& value) const {
         return find_index(value) != null;
     }
 
+    // ReSharper disable CppHiddenFunction
     const T& front() { return packed_.front(); }
     const T& back() { return packed_.back(); }
 
@@ -162,10 +173,14 @@ public:
     const_iterator end() const { return packed_.end(); }
     const_iterator cbegin(size_t n = 0) const { return packed_.cbegin() + n; }
     const_iterator cend() const { return packed_.cend(); }
-    auto rbegin(size_t n = 0) const { return packed_.rbegin() + n; }
-    auto rend() const { return packed_.rend(); }
-    auto crbegin(size_t n = 0) const { return packed_.crbegin() + n; }
-    auto crend() const { return packed_.crend(); }
+    const_reverse_iterator rbegin(size_t n = 0) const { return packed_.rbegin() + n; }
+    const_reverse_iterator rend() const { return packed_.rend(); }
+    const_reverse_iterator crbegin(size_t n = 0) const { return packed_.crbegin() + n; }
+    const_reverse_iterator crend() const { return packed_.crend(); }
+    // ReSharper restore CppHiddenFunction
+
+    [[nodiscard]] virtual size_t index(const const_iterator& it) const { return std::distance(begin(), it); }
+    [[nodiscard]] virtual size_t index(const T& entity) const { return find_index(entity); }
 
     void swap_elements(const iterator& a, const iterator& b) {
         auto ai = std::distance(packed_.cbegin(), a);
