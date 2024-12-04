@@ -13,6 +13,8 @@ namespace vigna::range {
 
 template <class It, class Sentinel = It>
 struct subrange {
+    static_assert(std::is_same_v<It, std::remove_reference_t<It>> &&
+                  std::is_same_v<Sentinel, std::remove_reference_t<Sentinel>>);
     using iterator = It;
     using sentinel = Sentinel;
     using value_type = std::decay_t<decltype(*std::declval<It>())>;
@@ -57,6 +59,7 @@ constexpr decltype(auto) operator|(Range&& rg, T&& fc) { return fc(std::forward<
 inline namespace _filter {
 
 constexpr struct all_t : view_factory {
+    constexpr auto& operator()() const {return *this;}
     template <class T, class = is_range_t<T>>
     constexpr auto operator()(T&& rg) const {
         return subrange{begin(rg), end(rg)};

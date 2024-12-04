@@ -213,6 +213,8 @@ class dense_map {
 public:
     using iterator = detail::dense_map_it_warp<node_t, node_deref>;
     using const_iterator = detail::dense_map_it_warp<node_t, node_deref, const value_t&>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     dense_map() = default;
 

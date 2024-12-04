@@ -196,7 +196,7 @@ template <class Entity, class Alloc>
 class basic_storage<Entity, Entity, Alloc> : public basic_sparse_set<Entity, Alloc> {
     using base_type = basic_sparse_set<Entity, Alloc>;
 
-    using traits = typename base_type::traits;
+    using traits = entity_traits<Entity>;
     static_assert(std::is_same_v<typename traits::entity_type, Entity>);
 
     using entity_type = typename traits::entity_type;
@@ -204,21 +204,100 @@ class basic_storage<Entity, Entity, Alloc> : public basic_sparse_set<Entity, All
     using id_type = typename traits::id_type;
     using version_type = typename traits::version_type;
 
+    static constexpr id_type id(const entity_type& entity) { return traits::id(entity); }
+    static constexpr version_type version(const entity_type& entity) { return traits::version(entity); }
+
 protected:
+    void swap_and_pop(size_t index) override {
+        assert(index < length_);
+        if (index != --length_)
+            swap_elements_index(index, length_);
+    } // swap only
+
+    value_type find_index(const entity_type& value) const override {
+        auto index = base_type::find_index(value);
+        return valid((size_t)index) ? index : null;
+    }
+
+    using base_type::swap_elements_index;
+    using base_type::reversion;
 
 public:
-    using base_type::iterator;
-    using base_type::const_iterator;
-    using base_type::reverse_iterator;
-    using base_type::const_reverse_iterator;
+    using iterator = typename base_type::iterator;
+    using const_iterator = typename base_type::const_iterator;
+    using reverse_iterator = typename base_type::reverse_iterator;
+    using const_reverse_iterator = typename base_type::const_reverse_iterator;
 
     using base_type::basic_sparse_set;
 
     basic_storage() = default;
 
-    entity_type create() {
+    [[nodiscard]] size_t size() const override { return length_; }
+    [[nodiscard]] bool empty() const override { return length_ == 0; }
 
+    [[nodiscard]] size_t cemetery_size() const { return base_type::size() - length_; }
+    [[nodiscard]] bool cemetery_empty() const { return base_type::size() == length_; }
+
+    using base_type::capacity;
+    using base_type::reserve;
+
+    [[nodiscard]] bool valid(size_t index) const { return index < length_; }
+    [[nodiscard]] bool valid(entity_type entity) const { return contains(entity); }
+
+    entity_type create() {
+        if (cemetery_empty()) base_type::emplace(length_, 0);
+        return *begin(length_++);
     }
+
+    void erase(const iterator& it) override {
+        swap_and_pop(index(it));
+    }
+
+    void erase(iterator first, iterator last) override {
+        assert(last >= first);
+        while (last != first) erase(--last);
+    }
+
+    void erase(const entity_type& value) override {
+        pop(value);
+    }
+
+    void clear() override {
+        base_type::clear();
+        length_ = 0;
+    }
+
+    void pop(const entity_type& entity) override {
+        if (auto index = find_index(entity); index != null)
+            swap_and_pop(index);
+    }
+
+    // ReSharper disable once CppHidingFunction
+    const_iterator find(const entity_type& entity) const {
+        auto index = find_index(entity);
+        return index != null ? begin(index) : end();
+    }
+
+    bool contains(const entity_type& value) const override {
+        return find_index(value) != null;
+    }
+
+    // ReSharper disable CppHidingFunction
+    const entity_type& front() { return *begin(); }
+    const entity_type& back() { return *begin(length_ - 1); }
+
+    using base_type::begin;
+    using base_type::cbegin;
+    using base_type::rend;
+    using base_type::crend;
+    [[nodiscard]] const_iterator end() const { return cbegin() + length_; }
+    [[nodiscard]] const_iterator cend() const { return cbegin() + length_; }
+    [[nodiscard]] const_reverse_iterator rbegin() const { return crend() - length_; }
+    [[nodiscard]] const_reverse_iterator crbegin() const { return crend() - length_; }
+    // ReSharper restore CppHidingFunction
+
+    using base_type::index;
+    using base_type::swap_elements;
 
 private:
     size_t length_{};

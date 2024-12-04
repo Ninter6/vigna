@@ -79,7 +79,7 @@ protected:
         packed_.pop_back();
     }
 
-    value_type find_index(const T& value) const {
+    virtual value_type find_index(const T& value) const {
         auto [i, j] = sparse_bise(id(value));
         if (i < sparse_.size() && sparse_[i]) return sparse_[i][j];
         return null;
@@ -87,7 +87,7 @@ protected:
 
     void swap_elements_index(size_t a, size_t b) {
         assert(a < packed_.size() && b < packed_.size());
-        std::swap(sparse_at(packed_[a]), sparse_at(packed_[b]));
+        std::swap(sparse_at(id(packed_[a])), sparse_at(id(packed_[b])));
         std::swap(packed_[a], packed_[b]);
     }
 

@@ -50,5 +50,9 @@ int main() {
     std::copy(view.begin(), view.end(), std::ostream_iterator<int>(std::cout, " "));
     std::endl(std::cout);
 
+    vigna::basic_storage<vigna::entity, vigna::entity> entities;
+    auto e2 = traits::id(entities.create());
+    std::cout << e2 << std::endl;
+
     return 0;
 }

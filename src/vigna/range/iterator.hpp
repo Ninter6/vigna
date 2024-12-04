@@ -80,7 +80,7 @@ struct packed_iterator {
 
     constexpr packed_iterator() = default;
     constexpr explicit packed_iterator(It&& it, Args&&... args)
-    : it(std::make_tuple(std::forward<It>(it), std::forward<Args>(args)...)) {}
+    : it(std::forward<It>(it), std::forward<Args>(args)...) {}
 
     template <size_t...I>
     constexpr decltype(auto) _get(std::index_sequence<I...>) const {return std::forward_as_tuple(*std::get<I>(it)...);}
@@ -100,6 +100,8 @@ struct packed_iterator {
 
 template <class It, class Fn = std::identity>
 struct transform_iterator {
+    static_assert(std::is_same_v<It, std::remove_reference_t<It>> &&
+                  std::is_same_v<Fn, std::remove_reference_t<Fn>>);
     using value_type = std::invoke_result_t<Fn, decltype(*std::declval<It>())>;
     using pointer = input_iterator_pointer<value_type>;
     using reference = value_type;
@@ -120,8 +122,8 @@ struct transform_iterator {
     template <class Fn_>
     bool operator!=(const transform_iterator<It, Fn_>& other) const {return it != other.it;}
 
-    std::decay_t<It> it;
-    std::decay_t<Fn> fn;
+    It it;
+    Fn fn;
 };
 
 }
