@@ -11,26 +11,6 @@
 
 namespace vigna {
 
-namespace detail {
-
-// template <class It, class... Other>
-// struct extended_storage_iterator {
-//     using iterator_type = It;
-//     using value_type = decltype(std::tuple_cat(std::make_tuple(*std::declval<It>()), std::forward_as_tuple(*std::declval<Other>()...)));
-//     using pointer = range::input_iterator_pointer<value_type>;
-//     using reference = value_type;
-//     using difference_type = std::ptrdiff_t;
-//     using iterator_category = std::input_iterator_tag;
-//     using iterator_concept = std::forward_iterator_tag;
-//
-//
-// private:
-//     std::tuple<It, Other...> it_;
-//
-// };
-
-}
-
 template <class Entity, class T, class Alloc = std::allocator<T>, class = void>
 class basic_storage : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
     using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
@@ -55,8 +35,6 @@ public:
     using const_iterator = typename container_type::const_iterator;
     using reverse_iterator = typename container_type::reverse_iterator;
     using const_reverse_iterator = typename container_type::const_reverse_iterator;
-
-    using base_type::basic_sparse_set;
 
     basic_storage() = default;
 
@@ -140,14 +118,14 @@ public:
         return cend();
     }
 
-    T& at(const Entity& entity) {
+    T& get(const Entity& entity) {
         auto index = find_index(entity);
-        assert(index != null);
+        assert(index != null && "Invalid entity!");
         return payload_[index];
     }
-    const T& at(const Entity& entity) const {
+    const T& get(const Entity& entity) const {
         auto index = find_index(entity);
-        assert(index != null);
+        assert(index != null && "Invalid entity!");
         return payload_[index];
     }
 
@@ -155,15 +133,31 @@ public:
         return *emplace(entity).first;
     }
     const T& operator[](const Entity& entity) const {
-        return at(entity);
+        return get(entity);
     }
 
     bool contains(const Entity& entity) const override {
         return find_index(entity) != null;
     }
 
+    auto reach() { return payload_ | view::all; }
+    auto reach() const { return payload_ | view::all; }
+
     auto each() { return view::pack(*this, payload_); }
     auto each() const { return view::pack(*this, payload_); }
+
+    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, T>, ...)>>
+    T& patch(const Entity& entity, Fns&&...f) {
+        auto& e = get(entity);
+        (std::forward<Fns>(f)(e), ...);
+        return e;
+    }
+    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, std::add_const_t<T>>, ...)>>
+    const T& patch(const Entity& entity, Fns&&...f) const {
+        auto& e = get(entity);
+        (std::forward<Fns>(f)(e), ...);
+        return e;
+    }
 
     // ReSharper disable CppHidingFunction
     T& front() { return payload_.front(); }
@@ -203,7 +197,7 @@ class basic_storage<Entity, Entity, Alloc> : public basic_sparse_set<Entity, All
     static_assert(std::is_same_v<typename traits::entity_type, Entity>);
 
     using entity_type = typename traits::entity_type;
-    using value_type = typename traits::value_type;
+    using entity_value = typename traits::value_type;
     using id_type = typename traits::id_type;
     using version_type = typename traits::version_type;
 
@@ -217,7 +211,7 @@ protected:
             swap_elements_index(index, length_);
     } // swap only
 
-    value_type find_index(const entity_type& value) const override {
+    entity_value find_index(const entity_type& value) const override {
         auto index = base_type::find_index(value);
         return valid((size_t)index) ? index : null;
     }
@@ -226,10 +220,10 @@ protected:
     using base_type::reversion;
 
 public:
-    using iterator = typename base_type::iterator;
-    using const_iterator = typename base_type::const_iterator;
-    using reverse_iterator = typename base_type::reverse_iterator;
-    using const_reverse_iterator = typename base_type::const_reverse_iterator;
+    using typename base_type::iterator;
+    using typename base_type::const_iterator;
+    using typename base_type::reverse_iterator;
+    using typename base_type::const_reverse_iterator;
 
     using base_type::basic_sparse_set;
 
@@ -305,6 +299,60 @@ public:
 
 private:
     size_t length_{};
+
+};
+
+template <class Entity, class T, class Alloc>
+struct basic_storage<Entity, T, Alloc, VIGNA_ETO(T)> : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
+    using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
+
+protected:
+
+public:
+    using typename base_type::iterator;
+    using typename base_type::const_iterator;
+    using typename base_type::reverse_iterator;
+    using typename base_type::const_reverse_iterator;
+
+    basic_storage() = default;
+
+    using base_type::size;
+    using base_type::empty;
+    using base_type::capacity;
+    using base_type::reserve;
+
+    template<class...Args>
+    std::pair<iterator, bool> emplace(const Entity& entity, Args&&...) {
+        return base_type::emplace(entity);
+    }
+
+    using base_type::erase;
+    using base_type::clear;
+
+    using base_type::find;
+    using base_type::contains;
+
+    void get(const Entity& entity) const {
+        assert(contains(entity) && "Invalid entity");
+    }
+
+    auto reach() const { return *this | view::all; }
+    auto each() const { return reach(); }
+
+    template<class...Fns>
+    auto patch(const Entity& entity, Fns&&...f) const {
+        assert(contains(entity) && "Invalid entity");
+        (std::forward<Fns>(f)(), ...);
+    }
+
+    using base_type::begin;
+    using base_type::end;
+    using base_type::cbegin;
+    using base_type::cend;
+    using base_type::rbegin;
+    using base_type::rend;
+    using base_type::crbegin;
+    using base_type::crend;
 
 };
 

@@ -21,15 +21,15 @@ class basic_sparse_set {
     static_assert(std::is_same_v<typename traits::entity_type, T>);
     static_assert(sizeof(typename traits::value_type) == sizeof(T));
 
-    using value_type = typename traits::value_type;
+    using entity_value = typename traits::value_type;
     using id_type = typename traits::id_type;
     using version_type = typename traits::version_type;
 
     static constexpr size_t sparse_page_size = VIGNA_SPARSE_PAGE;
-    struct sparse_page_deleter : private Alloc { void operator()(value_type* ptr) {
+    struct sparse_page_deleter : private Alloc { void operator()(entity_value* ptr) {
         Alloc::deallocate(reinterpret_cast<typename alloc_traits::pointer>(ptr), sparse_page_size);
     }};
-    using sparse_page = std::unique_ptr<value_type[], sparse_page_deleter>;
+    using sparse_page = std::unique_ptr<entity_value[], sparse_page_deleter>;
 
     using alloc_traits = std::allocator_traits<Alloc>;
     static_assert(std::is_same_v<typename alloc_traits::value_type, T>);
@@ -43,22 +43,22 @@ class basic_sparse_set {
         return {id / sparse_page_size, id % sparse_page_size};
     }
 
-    void sparse_emplace(id_type id, value_type index) {
+    void sparse_emplace(id_type id, entity_value index) {
         auto [i, j] = sparse_bise(id);
         if (i >= sparse_.size()) sparse_.resize(i + 1);
         if (sparse_[i] == nullptr) {
-            sparse_[i].reset(reinterpret_cast<value_type*>(packed_.get_allocator().allocate(sparse_page_size)));
+            sparse_[i].reset(reinterpret_cast<entity_value*>(packed_.get_allocator().allocate(sparse_page_size)));
             std::uninitialized_fill_n(sparse_[i].get(), sparse_page_size, null); // as we have the useful 'null', instead of 'null_index'
         }
         sparse_[i][j] = index;
     }
 
-    value_type& sparse_at(id_type id) {
+    entity_value& sparse_at(id_type id) {
         auto [i, j] = sparse_bise(id);
         assert(i < sparse_.size() && sparse_[i]);
         return sparse_[i][j];
     }
-    const value_type& sparse_at(id_type id) const {
+    const entity_value& sparse_at(id_type id) const {
         auto [i, j] = sparse_bise(id);
         assert(i < sparse_.size() && sparse_[i]);
         return sparse_[i][j];
@@ -73,13 +73,13 @@ protected:
         assert(index < packed_.size());
         isolate(id(packed_[index]));
         if (index != packed_.size() - 1) {
-            sparse_at(id(packed_.back())) = static_cast<value_type>(index);
+            sparse_at(id(packed_.back())) = static_cast<entity_value>(index);
             std::swap(packed_[index], packed_.back());
         }
         packed_.pop_back();
     }
 
-    virtual value_type find_index(const T& value) const {
+    virtual entity_value find_index(const T& value) const {
         auto [i, j] = sparse_bise(id(value));
         if (i < sparse_.size() && sparse_[i]) return sparse_[i][j];
         return null;
@@ -104,6 +104,8 @@ public:
     basic_sparse_set() = default;
     basic_sparse_set(const basic_sparse_set&) = delete;
     basic_sparse_set(basic_sparse_set&&) = default;
+    basic_sparse_set& operator=(const basic_sparse_set&) = delete;
+    basic_sparse_set& operator=(basic_sparse_set&&) = default;
 
     virtual ~basic_sparse_set() = default;
 
@@ -192,13 +194,13 @@ public:
         return id(a) < id(b);
     }) {
         std::sort(packed_.begin(), packed_.end(), camp);
-        for (value_type i = 0; i < packed_.size(); ++i)
+        for (entity_value i = 0; i < packed_.size(); ++i)
             sparse_at(id(packed_[i])) = i;
     }
 
     void partition(const std::function<bool(T)>& pre) {
         std::partition(packed_.begin(), packed_.end(), pre);
-        for (value_type i = 0; i < packed_.size(); ++i)
+        for (entity_value i = 0; i < packed_.size(); ++i)
             sparse_at(id(packed_[i])) = i;
     }
 
