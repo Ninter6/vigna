@@ -7,7 +7,7 @@
 #include <tuple>
 
 #include "sparse_set.hpp"
-#include "vigna/range/iterator.hpp"
+#include "vigna/range/view.hpp"
 
 namespace vigna {
 
@@ -162,6 +162,9 @@ public:
         return find_index(entity) != null;
     }
 
+    auto each() { return view::pack(*this, payload_); }
+    auto each() const { return view::pack(*this, payload_); }
+
     // ReSharper disable CppHidingFunction
     T& front() { return payload_.front(); }
     T& back() { return payload_.back(); }
@@ -245,6 +248,7 @@ public:
     [[nodiscard]] bool valid(entity_type entity) const { return contains(entity); }
 
     entity_type create() {
+        assert(base_type::size() == length_);
         if (cemetery_empty()) base_type::emplace(length_, 0);
         return *begin(length_++);
     }

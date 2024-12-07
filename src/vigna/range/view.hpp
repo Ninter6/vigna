@@ -13,10 +13,6 @@ namespace vigna::range {
 
 template <class It, class Sentinel = It>
 struct subrange {
-    static_assert(std::is_same_v<It, std::remove_reference_t<It>> &&
-                  std::is_same_v<Sentinel, std::remove_reference_t<Sentinel>>);
-    using iterator = It;
-    using sentinel = Sentinel;
     using value_type = std::decay_t<decltype(*std::declval<It>())>;
     using pointer = value_type*;
     using reference = value_type&;
@@ -36,7 +32,7 @@ private:
 
 namespace view {
 
-struct view_factory {};
+struct view_factory : std::identity {};
 
 constexpr struct iota_t {
     template <class T = int, class = std::enable_if_t<std::is_integral_v<T>>>

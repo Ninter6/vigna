@@ -100,8 +100,6 @@ struct packed_iterator {
 
 template <class It, class Fn = std::identity>
 struct transform_iterator {
-    static_assert(std::is_same_v<It, std::remove_reference_t<It>> &&
-                  std::is_same_v<Fn, std::remove_reference_t<Fn>>);
     using value_type = std::invoke_result_t<Fn, decltype(*std::declval<It>())>;
     using pointer = input_iterator_pointer<value_type>;
     using reference = value_type;
