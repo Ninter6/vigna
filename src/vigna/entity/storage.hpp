@@ -306,8 +306,6 @@ template <class Entity, class T, class Alloc>
 struct basic_storage<Entity, T, Alloc, VIGNA_ETO(T)> : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
     using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
 
-protected:
-
 public:
     using typename base_type::iterator;
     using typename base_type::const_iterator;
@@ -333,15 +331,15 @@ public:
     using base_type::contains;
 
     void get(const Entity& entity) const {
-        assert(contains(entity) && "Invalid entity");
+        assert(contains(entity) && "Invalid entity!");
     }
 
     auto reach() const { return *this | view::all; }
     auto each() const { return reach(); }
 
-    template<class...Fns>
+    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns> && ...)>>
     auto patch(const Entity& entity, Fns&&...f) const {
-        assert(contains(entity) && "Invalid entity");
+        assert(contains(entity) && "Invalid entity!");
         (std::forward<Fns>(f)(), ...);
     }
 
