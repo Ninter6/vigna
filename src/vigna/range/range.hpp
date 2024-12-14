@@ -16,8 +16,8 @@ constexpr bool is_range_v = false;
 template <class T>
 constexpr bool is_range_v<T, std::void_t<decltype(begin(std::declval<T>()), end(std::declval<T>()))>> = true;
 
-template <class T>
-using is_range_t = std::enable_if_t<is_range_v<T>>;
+template <class T, class R = void>
+using is_range_t = std::enable_if_t<is_range_v<T>, R>;
 
 template <class T, class = is_range_t<T>>
 constexpr size_t size(T&& rg) {

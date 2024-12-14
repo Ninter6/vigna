@@ -303,7 +303,7 @@ private:
 };
 
 template <class Entity, class T, class Alloc>
-struct basic_storage<Entity, T, Alloc, VIGNA_ETO(T)> : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
+class basic_storage<Entity, T, Alloc, VIGNA_ETO(T)> : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
     using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
 
 public:

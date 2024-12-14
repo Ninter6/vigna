@@ -80,6 +80,17 @@ constexpr struct take_t {
     constexpr auto operator()(size_t n) const { return impl_obj{n}; }
 } take{};
 
+constexpr struct reverse_t : view_factory {
+    constexpr auto& operator()() const {return *this;}
+    template <class T, class = std::void_t<is_range_t<T,
+        decltype(std::make_reverse_iterator(end(std::declval<T>())))>>>
+    auto operator()(T&& rg) const {
+        return subrange{
+            std::make_reverse_iterator(end(rg)),
+            std::make_reverse_iterator(begin(rg)) };
+    }
+} reverse{};
+
 } // namespace _filter
 
 inline namespace _algo {

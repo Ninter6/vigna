@@ -86,10 +86,14 @@ struct packed_iterator {
     constexpr decltype(auto) _get(std::index_sequence<I...>) const {return std::forward_as_tuple(*std::get<I>(it)...);}
     template <size_t...I>
     constexpr void _increase(std::index_sequence<I...>) {(++std::get<I>(it), ...);}
+    template <size_t...I>
+    constexpr void _decrease(std::index_sequence<I...>) {(--std::get<I>(it), ...);}
     auto operator*() const {return _get(std::make_index_sequence<sizeof...(Args) + 1>{});}
     pointer operator->() const {return **this;}
     packed_iterator& operator++() {return _increase(std::make_index_sequence<sizeof...(Args) + 1>{}), *this;}
     packed_iterator operator++(int) {auto cp = *this; return _increase(std::make_index_sequence<sizeof...(Args) + 1>{}), cp;}
+    packed_iterator& operator--() {return _decrease(std::make_index_sequence<sizeof...(Args) + 1>{}), *this;}
+    packed_iterator operator--(int) {auto cp = *this; return _decrease(std::make_index_sequence<sizeof...(Args) + 1>{}), cp;}
     template <class...Args_>
     bool operator==(const packed_iterator<It, Args_...>& other) const {return std::get<0>(it) == std::get<0>(other.it);}
     template <class...Args_>

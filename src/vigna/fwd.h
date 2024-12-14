@@ -7,4 +7,5 @@
 #include "config.h"
 #include "core/fwd.h"
 #include "range/fwd.h"
+#include "signal/fwd.h"
 #include "entity/fwd.h"

@@ -42,7 +42,7 @@ int main() {
     std::endl(std::cout);
 
     std::list list{1, 1, 4, 5, 1, 4};
-    for (auto&& i : list | vigna::view::take(4))
+    for (auto&& i : list | vigna::view::take(4) | vigna::range::view::reverse)
         std::cout << i;
     std::cout << std::endl;
 
@@ -53,6 +53,8 @@ int main() {
     vigna::basic_storage<vigna::entity, vigna::entity> entities;
     auto e2 = traits::id(entities.create());
     std::cout << e2 << std::endl;
+
+    std::function f = []{std::cout << 114514 << '\n';};
 
     return 0;
 }
