@@ -197,7 +197,13 @@ class dense_map {
             assert(pre != null_index);
             if (pre == length_) set_hash(hash_of(length_), index);
             else packed_.first()[pre].next = index;
-            std::swap(packed_.first()[index], packed_.first()[length_]);
+//            std::swap(packed_.first()[index], packed_.first()[length_]);
+            auto pa = &packed_.first()[index], pb = &packed_.first()[length_];
+            auto temp = std::move(*pa);
+            pa->~node_t();
+            new (pa) node_t{std::move(*pb)};
+            pb->~node_t();
+            new (pb) node_t{std::move(temp)};
         }
     }
 
@@ -254,12 +260,12 @@ public:
         while (last != first) erase(--last);
     }
 
-    void erase(const value_t& key) {
+    void erase(const Key& key) {
         if (auto it = find(key); it != end())
             erase(it);
     }
 
-    void pop(const value_t& key) {
+    void pop(const Key& key) {
         erase(key);
     }
 

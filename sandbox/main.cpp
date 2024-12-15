@@ -42,7 +42,7 @@ int main() {
     std::endl(std::cout);
 
     std::list list{1, 1, 4, 5, 1, 4};
-    for (auto&& i : list | vigna::view::take(4) | vigna::range::view::reverse)
+    for (auto&& i : list | vigna::view::all() | vigna::view::take(4))
         std::cout << i;
     std::cout << std::endl;
 
@@ -54,7 +54,16 @@ int main() {
     auto e2 = traits::id(entities.create());
     std::cout << e2 << std::endl;
 
-    std::function f = []{std::cout << 114514 << '\n';};
+    using tl = vigna::reflect::type_list<int, float, char, std::string, double>;
+    vigna::reflect::type_list_element_t<3, tl> str = "114514";
+    std::cout << str << std::endl;
+
+    auto call = [](int a, int b) { std::cout << "signal: " << a << ' ' << b << '\n'; };
+    vigna::signal<vigna::delegate<int, int>> signal;
+    auto conn = signal.connect<&decltype(call)::operator()>(&call);
+    signal.emit(114, 514);
+    conn.release();
+    signal.emit(1919, 810);
 
     return 0;
 }

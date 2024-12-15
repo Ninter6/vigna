@@ -17,21 +17,26 @@ enum class signal_r {
 
 struct connection {
     connection() = default;
-    explicit connection(const std::weak_ptr<bool>& connected)
+    explicit connection(const std::shared_ptr<bool>& connected)
         : connected(connected) {}
 
     [[nodiscard]] explicit operator bool() const {
-        auto p = connected.lock();
-        return p != nullptr ? *p : false;
+        return connected != nullptr ? *connected : false;
     }
 
     void release() const {
-        auto p = connected.lock();
-        if (p != nullptr) *p = false;
+        if (connected != nullptr)
+            *connected = false;
+    }
+
+    [[nodiscard]] bool operator==(const connection& other) const {
+        return connected == other.connected;
     }
 
 private:
-    std::weak_ptr<bool> connected;
+    std::shared_ptr<bool> connected;
+
+    friend class std::hash<connection>;
 
 };
 
@@ -57,6 +62,10 @@ public:
         return call_(std::forward<Args>(args)...);
     }
 
+    connection get_connection() const {
+        return connection{connected_};
+    }
+
     template <class Fn_, class = std::enable_if_t<std::is_invocable_v<Fn_, Args...>>>
     connection connect(Fn_&& fn) {
         if constexpr (std::is_invocable_r_v<bool, Fn_, Args...>)
@@ -69,13 +78,13 @@ public:
             };
         else call_ = std::forward<Fn_>(fn);
         *connected_ = true;
-        return connection{std::weak_ptr{connected_}};
+        return connection{connected_};
     }
 
     template <auto Func, class = std::enable_if_t<
         std::is_invocable_v<decltype(Func), Args...> ||
         std::is_member_function_pointer_v<decltype(Func)>>>
-    std::weak_ptr<bool> connect() {
+    connection connect() {
         if constexpr (std::is_invocable_v<decltype(Func), Args...>)
             return connect(Func);
         else {
@@ -117,3 +126,11 @@ private:
 };
 
 }
+
+template <>
+struct std::hash<vigna::connection> : std::hash<std::shared_ptr<bool>> {
+    using std::hash<std::shared_ptr<bool>>::operator();
+    size_t operator()(const vigna::connection& c) const {
+        return (*this)(c.connected);
+    }
+};
