@@ -130,7 +130,7 @@ private:
 template <>
 struct std::hash<vigna::connection> : std::hash<std::shared_ptr<bool>> {
     using std::hash<std::shared_ptr<bool>>::operator();
-    size_t operator()(const vigna::connection& c) const {
+    size_t operator()(const vigna::connection& c) const noexcept {
         return (*this)(c.connected);
     }
 };

@@ -33,6 +33,7 @@ public:
     }
 
     template<auto Fn, class...Args_, class = std::enable_if_t<
+        std::is_member_function_pointer_v<decltype(Fn)> ||
         std::is_invocable_v<decltype(Fn), Args_..., Args...>>>
     connection connect(Args_&&...obj_or_none) {
         call_t call{};
@@ -49,6 +50,7 @@ public:
     void emit(Args&&...args) {
         for (auto it = calls_.begin(); it != calls_.end();)
             switch (it->second(std::forward<Args>(args)...)) {
+                default:
                 case signal_r::keep: ++it; break;
                 case signal_r::erase: calls_.erase(it); break;
             }
@@ -58,5 +60,11 @@ private:
      container calls_;
 
 };
+
+template <class...Args>
+using signal_for = signal<delegate<Args...>>;
+
+template <class Alloc, class...Args>
+using signal_alloc = signal<delegate<Args...>, Alloc>;
 
 }

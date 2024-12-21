@@ -4,6 +4,7 @@
 #include <ranges>
 
 #include <vigna.hpp>
+#include "vigna/reflect/type_traits.hpp"
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
@@ -60,10 +61,16 @@ int main() {
 
     auto call = [](int a, int b) { std::cout << "signal: " << a << ' ' << b << '\n'; };
     vigna::signal<vigna::delegate<int, int>> signal;
-    auto conn = signal.connect<&decltype(call)::operator()>(&call);
+    auto conn = signal.connect<&decltype(call)::operator()>();
     signal.emit(114, 514);
     conn.release();
     signal.emit(1919, 810);
+
+    auto g0 = vigna::reflect::make_type_guard<int, long, double>();
+    auto g1 = vigna::reflect::make_type_guard<int, long, double>();
+    auto g2 = vigna::reflect::make_type_guard<int, float, double>();
+
+    std::cout << (g0 == g1) << ' ' << (g0 == g2) << ' ' << std::hash<decltype(g0)>{}(g0) << std::endl;
 
     return 0;
 }
