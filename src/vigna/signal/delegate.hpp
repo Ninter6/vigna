@@ -52,6 +52,16 @@ public:
     template <class Fn_, class = std::enable_if_t<std::is_invocable_v<Fn_, Args...>>>
     explicit delegate(Fn_&& fn) { connect(std::forward<Fn_>(fn)); }
 
+    template<class Alloc, class = std::enable_if_t<
+        std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type>>>
+    explicit delegate(const Alloc& alloc) : connected_(std::allocate_shared<bool>(alloc)) {}
+
+    template<class Alloc, class Fn_, class = std::enable_if_t<
+        std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type> &&
+        std::is_invocable_v<Fn_, Args...>>>
+    delegate(const Alloc& alloc, Fn_&& fn) : connected_(std::allocate_shared<bool>(alloc))
+    { connect(std::forward<Fn_>(fn)); }
+
     delegate(const delegate&) = delete;
     delegate(delegate&&) = default;
     delegate& operator=(const delegate&) = delete;
@@ -62,7 +72,7 @@ public:
         return call_(std::forward<Args>(args)...);
     }
 
-    connection get_connection() const {
+    [[nodiscard]] connection get_connection() const {
         return connection{connected_};
     }
 
@@ -130,7 +140,7 @@ private:
 template <>
 struct std::hash<vigna::connection> : std::hash<std::shared_ptr<bool>> {
     using std::hash<std::shared_ptr<bool>>::operator();
-    size_t operator()(const vigna::connection& c) const {
+    size_t operator()(const vigna::connection& c) const noexcept {
         return (*this)(c.connected);
     }
 };
