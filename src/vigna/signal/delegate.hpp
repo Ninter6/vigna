@@ -49,23 +49,23 @@ class delegate {
 
 public:
     delegate() = default;
+    delegate(const delegate&) = delete;
+    delegate(delegate&&) = default;
+    delegate& operator=(const delegate&) = delete;
+    delegate& operator=(delegate&&) = default;
+
     template <class Fn_, class = std::enable_if_t<std::is_invocable_v<Fn_, Args...>>>
     explicit delegate(Fn_&& fn) { connect(std::forward<Fn_>(fn)); }
 
-    template<class Alloc, class = std::enable_if_t<
-        std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type>>>
-    explicit delegate(const Alloc& alloc) : connected_(std::allocate_shared<bool>(alloc)) {}
+    template<class Alloc, class = std::enable_if_t<!std::is_same_v<bool, delegate>>> // a bug of Apple Clang
+    explicit delegate(const Alloc& alloc) : connected_(std::allocate_shared<bool>(alloc))
+    { static_assert(std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type>); }
 
     template<class Alloc, class Fn_, class = std::enable_if_t<
         std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type> &&
         std::is_invocable_v<Fn_, Args...>>>
     delegate(const Alloc& alloc, Fn_&& fn) : connected_(std::allocate_shared<bool>(alloc))
     { connect(std::forward<Fn_>(fn)); }
-
-    delegate(const delegate&) = delete;
-    delegate(delegate&&) = default;
-    delegate& operator=(const delegate&) = delete;
-    delegate& operator=(delegate&&) = default;
 
     signal_r operator()(Args&&...args) const {
         if (!*connected_) return signal_r::erase;

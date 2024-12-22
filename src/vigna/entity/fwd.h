@@ -7,3 +7,4 @@
 #include "entity.hpp"
 #include "sparse_set.hpp"
 #include "storage.hpp"
+#include "registry.hpp"

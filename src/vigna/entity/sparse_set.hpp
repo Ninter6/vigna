@@ -96,6 +96,8 @@ protected:
     }
 
 public:
+    using allocator_type = Alloc;
+    using entity_type = T;
     using iterator = typename packed_container::const_iterator;
     using const_iterator = iterator;
     using reverse_iterator = typename packed_container::const_reverse_iterator;

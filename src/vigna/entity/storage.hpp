@@ -13,14 +13,14 @@ namespace vigna {
 
 template <class Entity, class T, class Alloc = std::allocator<T>, class = void>
 class basic_storage : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
-    using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
-
     using alloc_traits = std::allocator_traits<Alloc>;
     static_assert(std::is_same_v<typename alloc_traits::value_type, T>);
 
     using container_type = std::vector<T, Alloc>;
 
 protected:
+    using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
+
     void swap_and_pop(size_t index) override {
         base_type::swap_and_pop(index);
         if (index != size() - 1)
@@ -31,6 +31,10 @@ protected:
     using base_type::find_index;
 
 public:
+    using allocator_type = Alloc;
+    using entity_type = Entity;
+    using element_type = T;
+    using value_type = element_type;
     using iterator = typename container_type::iterator;
     using const_iterator = typename container_type::const_iterator;
     using reverse_iterator = typename container_type::reverse_iterator;
@@ -191,27 +195,26 @@ private:
 
 template <class Entity, class Alloc>
 class basic_storage<Entity, Entity, Alloc> : public basic_sparse_set<Entity, Alloc> {
-    using base_type = basic_sparse_set<Entity, Alloc>;
-
     using traits = entity_traits<Entity>;
     static_assert(std::is_same_v<typename traits::entity_type, Entity>);
 
-    using entity_type = typename traits::entity_type;
     using entity_value = typename traits::value_type;
     using id_type = typename traits::id_type;
     using version_type = typename traits::version_type;
 
-    static constexpr id_type id(const entity_type& entity) { return traits::id(entity); }
-    static constexpr version_type version(const entity_type& entity) { return traits::version(entity); }
+    static constexpr id_type id(const Entity& entity) { return traits::id(entity); }
+    static constexpr version_type version(const Entity& entity) { return traits::version(entity); }
 
 protected:
+    using base_type = basic_sparse_set<Entity, Alloc>;
+
     void swap_and_pop(size_t index) override {
         assert(index < length_);
         if (index != --length_)
             swap_elements_index(index, length_);
     } // swap only
 
-    entity_value find_index(const entity_type& value) const override {
+    entity_value find_index(const Entity& value) const override {
         auto index = base_type::find_index(value);
         return valid((size_t)index) ? index : null;
     }
@@ -220,6 +223,10 @@ protected:
     using base_type::reversion;
 
 public:
+    using allocator_type = Alloc;
+    using entity_type = Entity;
+    using element_type = Entity;
+    using value_type = void;
     using typename base_type::iterator;
     using typename base_type::const_iterator;
     using typename base_type::reverse_iterator;
@@ -304,9 +311,14 @@ private:
 
 template <class Entity, class T, class Alloc>
 class basic_storage<Entity, T, Alloc, VIGNA_ETO(T)> : public basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>> {
+protected:
     using base_type = basic_sparse_set<Entity, typename std::allocator_traits<Alloc>::template rebind_alloc<Entity>>;
 
 public:
+    using allocator_type = Alloc;
+    using entity_type = Entity;
+    using element_type = T;
+    using value_type = void;
     using typename base_type::iterator;
     using typename base_type::const_iterator;
     using typename base_type::reverse_iterator;

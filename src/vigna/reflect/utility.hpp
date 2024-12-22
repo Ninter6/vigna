@@ -41,4 +41,9 @@ struct type_list_element<I, List<Args...>> {
 template<size_t I, class List>
 using type_list_element_t = typename type_list_element<I, List>::type;
 
+template <class To, class From>
+using constness_as_t = std::conditional_t<std::is_const_v<From>,
+    std::add_const_t<To>,
+    std::remove_const_t<To>>;
+
 }

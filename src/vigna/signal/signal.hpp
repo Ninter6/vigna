@@ -29,7 +29,7 @@ public:
 
     template<class Fn, class = std::enable_if_t<std::is_constructible_v<call_t, Fn>>>
     connection connect(Fn&& fn) {
-        call_t call{calls_.second(), fn};
+        call_t call{calls_.second(), std::forward<Fn>(fn)};
         auto conn = call.get_connection();
         calls_.first().emplace(conn, std::move(call));
         return conn;
