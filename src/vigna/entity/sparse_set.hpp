@@ -183,6 +183,8 @@ public:
     const_reverse_iterator crend() const { return packed_.crend(); }
     // ReSharper restore CppHiddenFunction
 
+    const T& operator[](size_t i) const { return packed_[i]; }
+
     [[nodiscard]] virtual size_t index(const const_iterator& it) const { return std::distance(begin(), it); }
     [[nodiscard]] virtual size_t index(const T& entity) const { return find_index(entity); }
 

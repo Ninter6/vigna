@@ -27,6 +27,9 @@ class signal<Delegate<Args...>, Alloc> {
 public:
     signal() = default;
 
+    [[nodiscard]] size_t size() const { return calls_.first().size(); }
+    [[nodiscard]] bool empty() const { return calls_.first().empty(); }
+
     template<class Fn, class = std::enable_if_t<std::is_constructible_v<call_t, Fn>>>
     connection connect(Fn&& fn) {
         call_t call{calls_.second(), std::forward<Fn>(fn)};
@@ -48,6 +51,12 @@ public:
     void disconnect(const connection& conn) {
         conn.release();
         calls_.first().erase(conn);
+    }
+
+    void clear() {
+        for (auto&& [conn, _] : calls_.first())
+            conn.release();
+        calls_.first().clear();
     }
 
     void emit(Args&&...args) {

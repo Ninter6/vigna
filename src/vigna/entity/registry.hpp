@@ -8,6 +8,17 @@
 
 namespace vigna {
 
+template <class Entity = entity, class Alloc = std::allocator<Entity>>
+struct basic_registry {
 
+public:
+    using allocator_type = Alloc;
+    using entity_type = Entity;
+
+private:
+
+};
+
+using registry = basic_registry<>;
 
 }

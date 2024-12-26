@@ -57,33 +57,49 @@ public:
         }
     }
 
-    template<class... Args>
-    std::pair<iterator, bool> replace(Entity entity, Args&&... args) {
-        assert(entity != null && base_type::size() == size());
-        if (auto it = find(entity); it != end()) {
-            auto p = &*it; p->~T();
-            new (p) T{std::forward<Args>(args)...};
-            return {it, true};
-        }
-        return {end(), false};
-    }
-
-    template<class... Args>
-    std::pair<iterator, bool> emplace_or_replace(Entity entity, Args&&... args) {
-        assert(entity != null && base_type::size() == size());
-        if (auto [it, success] = base_type::push(entity); success) {
-            payload_.emplace_back(std::forward<Args>(args)...);
-            return {end() - 1, true};
-        } else {
-            auto index = base_type::index(it);
-            auto p = &payload_[index]; p->~T();
-            new (p) T{std::forward<Args>(args)...};
-            return {payload_.begin() + index, false};
-        }
-    }
+    // template<class... Args>
+    // std::pair<iterator, bool> replace(Entity entity, Args&&... args) {
+    //     assert(entity != null && base_type::size() == size());
+    //     if (auto it = find(entity); it != end()) {
+    //         auto p = &*it; p->~T();
+    //         new (p) T{std::forward<Args>(args)...};
+    //         return {it, true};
+    //     }
+    //     return {end(), false};
+    // }
+    //
+    // template<class... Args>
+    // std::pair<iterator, bool> emplace_or_replace(Entity entity, Args&&... args) {
+    //     assert(entity != null && base_type::size() == size());
+    //     if (auto [it, success] = base_type::push(entity); success) {
+    //         payload_.emplace_back(std::forward<Args>(args)...);
+    //         return {end() - 1, true};
+    //     } else {
+    //         auto index = base_type::index(it);
+    //         auto p = &payload_[index]; p->~T();
+    //         new (p) T{std::forward<Args>(args)...};
+    //         return {payload_.begin() + index, false};
+    //     }
+    // }
 
     std::pair<iterator, bool> push(Entity entity, const T& value) {
         return emplace(entity, value);
+    }
+
+    template <class First_, class Last_, class =
+        std::enable_if_t<std::is_constructible_v<Entity, decltype(*std::declval<First_>())>, std::void_t<decltype(*++std::declval<First_>() != *std::declval<Last_>())>>>
+    iterator insert(First_&& first, Last_&& last, const T& value) {
+        for (auto it = first; it != last; ++it) emplace(*it, value);
+        return end() - 1;
+    }
+
+    template <class First_, class Last_, class CFirst_, class = std::enable_if_t<
+        std::is_constructible_v<Entity, decltype(*std::declval<First_>())> &&
+        std::is_constructible_v<T,decltype(*std::declval<CFirst_>())>,
+        std::void_t<decltype(*++std::declval<First_>() != *std::declval<Last_>(), *++std::declval<CFirst_>())>>>
+    iterator insert(First_&& first, Last_&& last, CFirst_ values) {
+        for (auto it = first; it != last; ++it, ++values) emplace(*it, *values);
+        return end() - 1;
     }
 
     void erase(const iterator& it) {
@@ -183,6 +199,8 @@ public:
     const_reverse_iterator crend() const { return payload_.crend(); }
     // ReSharper restore CppHidingFunction
 
+    using base_type::operator[];
+
     using base_type::index;
     size_t index(const const_iterator& it) const {
         return std::distance(cbegin(), it);
@@ -248,10 +266,23 @@ public:
     [[nodiscard]] bool valid(size_t index) const { return index < length_; }
     [[nodiscard]] bool valid(entity_type entity) const { return contains(entity); }
 
-    entity_type create() {
-        assert(base_type::size() == length_);
+    entity_type emplace() {
         if (cemetery_empty()) base_type::emplace(length_, 0);
         return *begin(length_++);
+    }
+
+    // ReSharper disable once CppHidingFunction
+    entity_type emplace(const entity_type& hint) {
+        assert(hint != null && id(hint) < base_type::size());
+        if (auto i = base_type::find_index(hint); !valid(i))
+            swap_elements_index(length_++, i);
+        return hint;
+    }
+
+    template <class First_, class Last_, class =
+        std::enable_if_t<std::is_constructible_v<Entity, decltype(*std::declval<First_>())>, std::void_t<decltype(*++std::declval<First_>() != *std::declval<Last_>())>>>
+    void insert(First_&& first, Last_&& last) {
+        for (auto it = first; it != last; ++it) emplace(*it);
     }
 
     void erase(const iterator& it) override {
@@ -301,6 +332,8 @@ public:
     [[nodiscard]] const_reverse_iterator crbegin() const { return crend() - length_; }
     // ReSharper restore CppHidingFunction
 
+    using base_type::operator[];
+
     using base_type::index;
     using base_type::swap_elements;
 
@@ -336,6 +369,12 @@ public:
         return base_type::emplace(entity);
     }
 
+    template <class First_, class Last_, class...Args, class =
+        std::enable_if_t<std::is_constructible_v<Entity, decltype(*std::declval<First_>())>, std::void_t<decltype(*++std::declval<First_>() != *std::declval<Last_>())>>>
+    void insert(First_&& first, Last_&& last, Args&&...) {
+        for (auto it = first; it != last; ++it) base_type::emplace(*it);
+    }
+
     using base_type::erase;
     using base_type::clear;
 
@@ -363,6 +402,7 @@ public:
     using base_type::rend;
     using base_type::crbegin;
     using base_type::crend;
+    using base_type::operator[];
 
 };
 

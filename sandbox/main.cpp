@@ -30,7 +30,7 @@ int main() {
 
     vigna::basic_storage<vigna::entity, int> storage;
     auto e = traits::construct(5, 1);
-    storage.emplace_or_replace(e, 114514);
+    // storage.emplace_or_replace(e, 114514);
     auto e1 = traits::combine(sparse_set.back(), e);
     storage.emplace(e1, 1919);
     storage.pop(e1);
@@ -51,7 +51,7 @@ int main() {
     std::endl(std::cout);
 
     vigna::basic_storage<vigna::entity, vigna::entity> entities;
-    auto e2 = traits::id(entities.create());
+    auto e2 = traits::id(entities.emplace());
     std::cout << e2 << std::endl;
 
     using tl = vigna::reflect::type_list<int, float, char, std::string, double>;
@@ -64,6 +64,9 @@ int main() {
     signal.emit(114, 514);
     conn.release();
     signal.emit(1919, 810);
+
+    vigna::basic_signal_mixin<decltype(entities), vigna::registry> mixin;
+    mixin.on_construct();
 
     return 0;
 }
