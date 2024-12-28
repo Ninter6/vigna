@@ -91,10 +91,6 @@ protected:
         std::swap(packed_[a], packed_[b]);
     }
 
-    void reversion(size_t index, version_type version) {
-        traits::reversion(packed_[index], version);
-    }
-
 public:
     using allocator_type = Alloc;
     using entity_type = T;
@@ -134,12 +130,12 @@ public:
         return {begin(index), true};
     }
 
-    virtual void erase(const iterator& it) {
+    void erase(const iterator& it) {
         auto index = std::distance(packed_.cbegin(), it);
         swap_and_pop(index);
     }
 
-    virtual void erase(iterator first, iterator last) {
+    void erase(iterator first, iterator last) {
         assert(last >= first);
         while (last != first) erase(--last);
     }
@@ -194,6 +190,17 @@ public:
         swap_elements_index(ai, bi);
     }
 
+    version_type current(const entity_type& entity) const {
+        auto it = find(entity);
+        return traits::version(it == end() ? null : *it);
+    }
+
+    void bump(const entity_type& entity) {
+        assert(entity != null);
+        auto index = find_index(entity);
+        traits::reversion(packed_[index], version(entity));
+    }
+
     void sort(const std::function<bool(T, T)>& camp = [](const T& a, const T& b) {
         return id(a) < id(b);
     }) {
@@ -204,10 +211,9 @@ public:
 
     void partition(const std::function<bool(T)>& pre) {
         std::partition(packed_.begin(), packed_.end(), pre);
-        for (entity_value i = 0; i < packed_.size(); ++i)
+        for (size_t i = 0; i < packed_.size(); ++i)
             sparse_at(id(packed_[i])) = i;
     }
-
 
     bool is_sorted(const std::function<bool(T, T)>& camp = [](const T& a, const T& b) {
         return id(a) < id(b);

@@ -34,20 +34,20 @@ struct entity_traits<uint16_t> {
     using id_type = uint8_t;
     using version_type = uint8_t;
     
-    static constexpr id_type id_max = 255;
-    static constexpr version_type version_max = 255;
-    static constexpr entity_type null = ~0;
+    static constexpr id_type id_max = 255u;
+    static constexpr version_type version_max = 255u;
+    static constexpr entity_type null = 65535u;
 };
 
 template <>
 struct entity_traits<uint32_t> {
     using entity_type = uint32_t;
     using value_type = uint32_t;
-    using id_type = uint32_t; // 24
-    using version_type = uint8_t; // 8
+    using id_type = uint32_t; // 20
+    using version_type = uint16_t; // 12
 
-    static constexpr id_type id_max = 16777215u;
-    static constexpr version_type version_max = 255u;
+    static constexpr id_type id_max = 0xfffffu;
+    static constexpr version_type version_max = 0xfffu;
     static constexpr entity_type null = ~0u;
 };
 
@@ -108,16 +108,18 @@ struct entity_traits : detail::entity_traits<T> {
         return construct(id(e_id), version(e_ver));
     }
 
-    static constexpr id_type next_id(entity_type entity) {
+    static constexpr entity_type next_id(entity_type entity) {
         auto n = id(entity);
-        if (++n == id_max) return 0;
-        return n;
+        if (++n == id_max)
+            return construct(0u, version(entity));
+        return construct(n, version(entity));
     }
     
-    static constexpr id_type next_version(entity_type entity) {
+    static constexpr entity_type next_version(entity_type entity) {
         auto n = version(entity);
-        if (++n == version_max) return 0;
-        return n;
+        if (++n == version_max)
+            return construct(id(entity), 0u);
+        return construct(id(entity), n);
     }
 
     static constexpr void reid(entity_type& entity, id_type id) {

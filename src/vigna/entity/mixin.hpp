@@ -60,7 +60,7 @@ class basic_signal_mixin final: public Type {
 
     void swap_and_pop(size_t index) final {
         assert(index < underlying_type::size());
-        destruction_.emit(owner_or_assert(), (entity_type)underlying_type::operator[](index));
+        destruction_.emit(owner_or_assert(), underlying_type::operator[](index));
         underlying_type::swap_and_pop(index);
     }
 
@@ -88,8 +88,8 @@ public:
     decltype(auto) emplace(entity_type hint, Args&&...args) {
         if constexpr (std::is_same_v<entity_type, typename underlying_type::element_type>) {
             if (!underlying_type::contains(hint)) {
-                underlying_type::emplace(hint, std::forward<Args>(args)...);
-                construction_.emit(owner_or_assert(), hint);
+                auto elem = underlying_type::emplace(hint, std::forward<Args>(args)...);
+                construction_.emit(owner_or_assert(), elem);
             }
             return hint;
         } else {
@@ -111,7 +111,7 @@ public:
     void clear() final {
         if (!destruction_.empty())
             for (size_t i = 0; i < underlying_type::size(); ++i)
-                destruction_.emit(owner_or_assert(), (entity_type)underlying_type::operator[](i));
+                destruction_.emit(owner_or_assert(), underlying_type::operator[](i));
         underlying_type::clear();
     }
 

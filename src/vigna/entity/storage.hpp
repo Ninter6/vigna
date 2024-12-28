@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <tuple>
-
 #include "sparse_set.hpp"
 #include "vigna/range/view.hpp"
 
@@ -102,28 +100,20 @@ public:
         return end() - 1;
     }
 
+    // ReSharper disable once CppHidingFunction
     void erase(const iterator& it) {
-        auto i = index(it);
-        swap_and_pop(i);
+        swap_and_pop(index(it));
     }
 
+    // ReSharper disable once CppHidingFunction
     void erase(iterator first, iterator last) {
-        base_type::erase(first, last);
+        assert(first <= last);
         while (first != last) erase(--last);
-    }
-
-    void erase(const Entity& entity) override {
-        pop(entity);
     }
 
     void clear() override {
         base_type::clear();
         payload_.clear();
-    }
-
-    void pop(const Entity& entity) override {
-        if (auto index = find_index(entity); index != null)
-            swap_and_pop(index);
     }
 
     iterator find(const Entity& entity) {
@@ -156,9 +146,7 @@ public:
         return get(entity);
     }
 
-    bool contains(const Entity& entity) const override {
-        return find_index(entity) != null;
-    }
+    using base_type::contains;
 
     auto reach() { return payload_ | view::all; }
     auto reach() const { return payload_ | view::all; }
@@ -230,6 +218,7 @@ protected:
         assert(index < length_);
         if (index != --length_)
             swap_elements_index(index, length_);
+        bump(traits::next_version((*this)[length_]));
     } // swap only
 
     entity_value find_index(const Entity& value) const override {
@@ -238,7 +227,6 @@ protected:
     }
 
     using base_type::swap_elements_index;
-    using base_type::reversion;
 
 public:
     using allocator_type = Alloc;
@@ -267,16 +255,21 @@ public:
     [[nodiscard]] bool valid(entity_type entity) const { return contains(entity); }
 
     entity_type emplace() {
+        assert(length_ < traits::id_max && "No more entity!");
         if (cemetery_empty()) base_type::emplace(length_, 0);
         return *begin(length_++);
     }
 
     // ReSharper disable once CppHidingFunction
     entity_type emplace(const entity_type& hint) {
-        assert(hint != null && id(hint) < base_type::size());
-        if (auto i = base_type::find_index(hint); !valid(i))
+        assert(hint != null && id(hint) <= base_type::size());
+        if (id(hint) == base_type::size()) {
+            base_type::push(hint); // must succeed
+            swap_elements_index(length_++, base_type::size() - 1);
+        } else if (auto i = base_type::find_index(hint); assert(i != null), !valid(i))
             swap_elements_index(length_++, i);
-        return hint;
+        else return base_type::operator[](i);
+        return back();
     }
 
     template <class First_, class Last_, class =
@@ -285,27 +278,12 @@ public:
         for (auto it = first; it != last; ++it) emplace(*it);
     }
 
-    void erase(const iterator& it) override {
-        swap_and_pop(index(it));
-    }
-
-    void erase(iterator first, iterator last) override {
-        assert(last >= first);
-        while (last != first) erase(--last);
-    }
-
-    void erase(const entity_type& value) override {
-        pop(value);
-    }
+    using base_type::erase;
+    using base_type::pop;
 
     void clear() override {
         base_type::clear();
         length_ = 0;
-    }
-
-    void pop(const entity_type& entity) override {
-        if (auto index = find_index(entity); index != null)
-            swap_and_pop(index);
     }
 
     // ReSharper disable once CppHidingFunction
@@ -314,9 +292,7 @@ public:
         return index != null ? begin(index) : end();
     }
 
-    bool contains(const entity_type& value) const override {
-        return find_index(value) != null;
-    }
+    using base_type::contains;
 
     // ReSharper disable CppHidingFunction
     const entity_type& front() { return *begin(); }
@@ -336,6 +312,8 @@ public:
 
     using base_type::index;
     using base_type::swap_elements;
+
+    using base_type::bump;
 
 private:
     size_t length_{};

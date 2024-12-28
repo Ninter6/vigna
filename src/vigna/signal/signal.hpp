@@ -59,7 +59,7 @@ public:
         calls_.first().clear();
     }
 
-    void emit(Args&&...args) {
+    void emit(Args...args) {
         for (auto it = calls_.first().begin(); it != calls_.first().end();)
             switch (it->second(std::forward<Args>(args)...)) {
                 default:

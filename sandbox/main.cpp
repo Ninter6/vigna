@@ -30,11 +30,11 @@ int main() {
 
     vigna::basic_storage<vigna::entity, int> storage;
     auto e = traits::construct(5, 1);
-    // storage.emplace_or_replace(e, 114514);
     auto e1 = traits::combine(sparse_set.back(), e);
     storage.emplace(e1, 1919);
-    storage.pop(e1);
-    std::cout << storage[e] << " " << storage.contains(e1) << std::endl;
+    storage[e] = 114514;
+    storage.erase(storage.find(e1));
+    std::cout << storage.get(e) << " " << storage.contains(e1) << std::endl;
 
     int arr[]{1, 1, 4, 5, 1, 4};
     for (auto&& i : arr | vigna::view::all)
@@ -65,8 +65,14 @@ int main() {
     conn.release();
     signal.emit(1919, 810);
 
-    vigna::basic_signal_mixin<decltype(entities), vigna::registry> mixin;
-    mixin.on_construct();
+    vigna::registry registry;
+    vigna::basic_signal_mixin<decltype(entities), vigna::registry> mixin{&registry};
+    auto conn1 = mixin.on_construct().connect([](auto&& r, auto&& e) { std::cout << (int)traits::version(e); });
+    mixin.emplace(traits::construct(0, 1919));
+    mixin.emplace(traits::construct(0, 514));
+    conn1.release();
+    mixin.emplace(traits::construct(1, 514));
+    std::endl(std::cout);
 
     return 0;
 }
