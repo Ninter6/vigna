@@ -74,5 +74,8 @@ int main() {
     mixin.emplace(traits::construct(1, 514));
     std::endl(std::cout);
 
+    auto e3 = registry.create(traits::construct(0, 810));
+    std::cout << traits::version(e3) << std::endl;
+
     return 0;
 }

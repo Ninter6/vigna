@@ -140,8 +140,10 @@ public:
         while (last != first) erase(--last);
     }
 
-    virtual void erase(const T& value) {
-        pop(value);
+    void erase(const T& value) {
+        auto index = find_index(value);
+        assert(index != null);
+        swap_and_pop(index);
     }
 
     virtual void clear() {
@@ -150,9 +152,14 @@ public:
         packed_.clear();
     }
 
-    virtual void pop(const T& value) {
+    bool pop(const T& value) {
         if (auto index = find_index(value); index != null)
-            swap_and_pop(index);
+            return swap_and_pop(index), true;
+        return false;
+    }
+
+    size_t pop(iterator first, iterator last) {
+        return std::count_if(first, last, [&](auto&&e) { return pop(e); });
     }
 
     // ReSharper disable once CppHiddenFunction
@@ -205,7 +212,7 @@ public:
         return id(a) < id(b);
     }) {
         std::sort(packed_.begin(), packed_.end(), camp);
-        for (entity_value i = 0; i < packed_.size(); ++i)
+        for (size_t i = 0; i < packed_.size(); ++i)
             sparse_at(id(packed_[i])) = i;
     }
 
