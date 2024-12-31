@@ -32,7 +32,7 @@ private:
 
 namespace view {
 
-struct view_factory : std::identity {};
+struct view_factory {};
 
 constexpr struct iota_t {
     template <class T = int, class = std::enable_if_t<std::is_integral_v<T>>>
@@ -96,8 +96,7 @@ constexpr struct filter_t {
     struct impl_obj : view_factory {
         template <class T, class = std::enable_if_t<is_range_v<T> && std::is_invocable_r_v<bool, Fn, decltype(*begin(std::declval<T>()))>>>
         constexpr auto operator()(T&& rg) const {
-            using second_t = decltype(filter_iterator{begin(rg), end(rg), std::move(fn)});
-            return subrange{filter_iterator{begin(rg), end(rg), std::move(fn)}, second_t{end(rg), end(rg)}};
+            return subrange{filter_iterator{begin(rg), end(rg), fn}, filter_iterator{end(rg), end(rg), std::move(const_cast<impl_obj*>(this)->fn)}};
         }
         template <class Fn_>
         constexpr explicit impl_obj(Fn_&& fn) : fn(std::forward<Fn_>(fn)) {}
@@ -107,8 +106,7 @@ constexpr struct filter_t {
     template <class T, class Fn, class =
         std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
     constexpr auto operator()(T&& rg, Fn&& fn) const {
-        using second_t = decltype(filter_iterator{begin(rg), end(rg), std::forward<Fn>(fn)});
-        return subrange{filter_iterator{begin(rg), end(rg), std::forward<Fn>(fn)}, second_t{end(rg), end(rg)}};
+        return subrange{filter_iterator{begin(rg), end(rg), fn}, filter_iterator{end(rg), end(rg), fn}};
     }
     template <class Fn>
     constexpr auto operator()(Fn&& fn) const { return impl_obj<Fn>{std::forward<Fn>(fn)}; }
@@ -123,8 +121,7 @@ constexpr struct transform_t {
     struct impl_obj : view_factory {
         template <class T, class = std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
         constexpr auto operator()(T&& rg) const {
-            using second_t = decltype(transform_iterator{begin(rg), std::move(fn)});
-            return subrange{transform_iterator{begin(rg), std::move(fn)}, second_t{end(rg)}};
+            return subrange{transform_iterator{begin(rg), fn}, transform_iterator{end(rg), std::move(const_cast<impl_obj*>(this)->fn)}};
         }
         template <class Fn_>
         constexpr explicit impl_obj(Fn_&& fn) : fn(std::forward<Fn_>(fn)) {}
@@ -134,8 +131,7 @@ constexpr struct transform_t {
     template <class T, class Fn, class =
         std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
     constexpr auto operator()(T&& rg, Fn&& fn) const {
-        using second_t = decltype(transform_iterator{begin(rg), std::forward<Fn>(fn)});
-        return subrange{transform_iterator{begin(rg), std::forward<Fn>(fn)}, second_t{end(rg)}};
+        return subrange{transform_iterator{begin(rg), fn}, transform_iterator{end(rg), fn}};
     }
     template <class Fn>
     constexpr auto operator()(Fn&& fn) const { return impl_obj<Fn>{std::forward<Fn>(fn)}; }

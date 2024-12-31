@@ -45,12 +45,15 @@ class basic_registry {
     template <class T>
     using storage_for_type = detail::storage_for_t<T, Entity, typename alloc_traits::template rebind_alloc<T>>;
 
+    template<class T>
+    static constexpr auto type_hash() { return reflect::type_hash<T, hash_value>(); }
+
 protected:
     template <class T>
-    decltype(auto) assure(hash_value id = reflect::type_hash<T>()) {
+    decltype(auto) assure(hash_value id = type_hash<T>()) {
         static_assert(std::is_same_v<T, std::decay_t<T>>, "Non-decayed types not allowed");
         if constexpr (std::is_same_v<T, Entity>) {
-            assert(id == reflect::type_hash<Entity>() && "User entity storage not allowed");
+            assert(id == type_hash<Entity>() && "User entity storage not allowed");
             return entities_;
         } else {
             using storage_type = storage_for_type<T>;
@@ -69,10 +72,10 @@ protected:
     }
 
     template <class T>
-    const auto* assure(hash_value id = reflect::type_hash<T>()) const {
+    const auto* assure(hash_value id = type_hash<T>()) const {
         static_assert(std::is_same_v<T, std::decay_t<T>>, "Non-decayed types not allowed");
         if constexpr (std::is_same_v<T, Entity>) {
-            assert(id == reflect::type_hash<Entity>() && "User entity storage not allowed");
+            assert(id == type_hash<Entity>() && "User entity storage not allowed");
             return &entities_;
         } else {
             using storage_type = storage_for_type<T>;
@@ -297,21 +300,31 @@ public:
     }
 
     template<class T>
-    [[nodiscard]] auto on_construct(const hash_value id = reflect::type_hash<T>()) {
+    [[nodiscard]] auto on_construct(const hash_value id = type_hash<T>()) {
         return assure<T>(id).on_construct();
     }
 
     template<class T>
-    [[nodiscard]] auto on_destroy(const hash_value id = reflect::type_hash<T>()) {
+    [[nodiscard]] auto on_destroy(const hash_value id = type_hash<T>()) {
         return assure<T>(id).on_destroy();
     }
 
     template<class T>
-    [[nodiscard]] auto on_update(const hash_value id = reflect::type_hash<T>()) {
+    [[nodiscard]] auto on_update(const hash_value id = type_hash<T>()) {
         return assure<T>(id).on_update();
     }
 
+    template<class...Get, class...Exclude>
+    auto view(exclude_t<Exclude...> = exclude_t<>{}) {
+        using view_type = basic_view<base_type, get_t<storage_for_type<Get>...>, exclude_t<storage_for_type<Exclude>...>>;
+        return view_type{&assure<Get>()..., &assure<Exclude>()...};
+    }
 
+    template<class...Get, class...Exclude>
+    auto view(exclude_t<Exclude...> = exclude_t<>{}) const {
+        using view_type = basic_view<base_type, get_t<std::add_const_t<storage_for_type<Get>>...>, exclude_t<std::add_const_t<storage_for_type<Exclude>>...>>;
+        return view_type{assure<Get>()..., assure<Exclude>()...};
+    }
 
 private:
     pool_container_type pools_{};

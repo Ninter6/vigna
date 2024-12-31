@@ -83,8 +83,18 @@ int main() {
     std::endl(std::cout);
 
     registry.emplace<int>(e3, 114514);
-    auto& val = registry.emplace_or_replace<int>(e3, 1919810);
-    std::cout << val << std::endl;
+    registry.emplace<double>(e3, 114.514);
+    registry.emplace_or_replace<int>(e3, 1919810);
+
+    auto e4 = registry.create();
+    registry.emplace<int>(e4, 1919);
+    registry.emplace<double>(e4, 114514);
+    registry.patch<double>(e4, [](auto&& v) { v = 8.10; });
+
+    auto view1 = registry.view<int, double>();
+    for (auto&& [vigna, i, d] : view1.each()) {
+        std::cout << "entity[" << traits::id(vigna) << "]: " << i << " " << d << '\n';
+    }
 
     return 0;
 }
