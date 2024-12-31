@@ -217,6 +217,10 @@ class dense_map {
     }
 
 public:
+    using allocator_type = Alloc;
+    using key_type = Key;
+    using mapped_type = Value;
+    using value_type = value_t;
     using iterator = detail::dense_map_it_warp<node_t, node_deref>;
     using const_iterator = detail::dense_map_it_warp<node_t, node_deref, const value_t&>;
     using reverse_iterator = std::reverse_iterator<iterator>;

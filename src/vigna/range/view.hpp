@@ -91,6 +91,29 @@ constexpr struct reverse_t : view_factory {
     }
 } reverse{};
 
+constexpr struct filter_t {
+    template <class Fn>
+    struct impl_obj : view_factory {
+        template <class T, class = std::enable_if_t<is_range_v<T> && std::is_invocable_r_v<bool, Fn, decltype(*begin(std::declval<T>()))>>>
+        constexpr auto operator()(T&& rg) const {
+            using second_t = decltype(filter_iterator{begin(rg), end(rg), std::move(fn)});
+            return subrange{filter_iterator{begin(rg), end(rg), std::move(fn)}, second_t{end(rg), end(rg)}};
+        }
+        template <class Fn_>
+        constexpr explicit impl_obj(Fn_&& fn) : fn(std::forward<Fn_>(fn)) {}
+        impl_obj(impl_obj&&) = delete;
+        Fn fn;
+    };
+    template <class T, class Fn, class =
+        std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
+    constexpr auto operator()(T&& rg, Fn&& fn) const {
+        using second_t = decltype(filter_iterator{begin(rg), end(rg), std::forward<Fn>(fn)});
+        return subrange{filter_iterator{begin(rg), end(rg), std::forward<Fn>(fn)}, second_t{end(rg), end(rg)}};
+    }
+    template <class Fn>
+    constexpr auto operator()(Fn&& fn) const { return impl_obj<Fn>{std::forward<Fn>(fn)}; }
+} filter{};
+
 } // namespace _filter
 
 inline namespace _algo {
@@ -98,22 +121,24 @@ inline namespace _algo {
 constexpr struct transform_t {
     template <class Fn>
     struct impl_obj : view_factory {
-        template <class T, class = std::enable_if_t<is_range_v<T> && std::invocable<Fn, decltype(*begin(std::declval<T>()))>>>
+        template <class T, class = std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
         constexpr auto operator()(T&& rg) const {
             using second_t = decltype(transform_iterator{begin(rg), std::move(fn)});
             return subrange{transform_iterator{begin(rg), std::move(fn)}, second_t{end(rg)}};
         }
-        constexpr explicit impl_obj(Fn&& fn) : fn(std::forward<Fn>(fn)) {}
+        template <class Fn_>
+        constexpr explicit impl_obj(Fn_&& fn) : fn(std::forward<Fn_>(fn)) {}
         impl_obj(impl_obj&&) = delete;
         Fn fn;
     };
     template <class T, class Fn, class =
-        std::enable_if_t<is_range_v<T> && std::invocable<Fn, decltype(*begin(std::declval<T>()))>>>
+        std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
     constexpr auto operator()(T&& rg, Fn&& fn) const {
-        return subrange{transform_iterator{begin(rg), std::forward<Fn>(fn)}, transform_iterator{end(rg)}};
+        using second_t = decltype(transform_iterator{begin(rg), std::forward<Fn>(fn)});
+        return subrange{transform_iterator{begin(rg), std::forward<Fn>(fn)}, second_t{end(rg)}};
     }
     template <class Fn>
-    constexpr auto operator()(Fn&& fn) const { return impl_obj{std::forward<Fn>(fn)}; }
+    constexpr auto operator()(Fn&& fn) const { return impl_obj<Fn>{std::forward<Fn>(fn)}; }
 } transform{};
 
 } // namespace _algo

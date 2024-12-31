@@ -154,18 +154,18 @@ public:
     auto each() { return view::pack(*this, payload_); }
     auto each() const { return view::pack(*this, payload_); }
 
-    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, T>, ...)>>
+    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, T> && ...)>>
     T& patch(const Entity& entity, Fns&&...f) {
         auto& e = get(entity);
         (std::forward<Fns>(f)(e), ...);
         return e;
     }
-    template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, std::add_const_t<T>>, ...)>>
-    const T& patch(const Entity& entity, Fns&&...f) const {
-        auto& e = get(entity);
-        (std::forward<Fns>(f)(e), ...);
-        return e;
-    }
+    // template<class...Fns, class = std::enable_if_t<(std::is_invocable_v<Fns, std::add_const_t<T>> && ...)>>
+    // const T& patch(const Entity& entity, Fns&&...f) const {
+    //     auto& e = get(entity);
+    //     (std::forward<Fns>(f)(e), ...);
+    //     return e;
+    // }
 
     // ReSharper disable CppHidingFunction
     T& front() { return payload_.front(); }
@@ -313,6 +313,7 @@ public:
     using base_type::index;
     using base_type::swap_elements;
 
+    using base_type::current;
     using base_type::bump;
 
 private:

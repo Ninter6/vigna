@@ -232,6 +232,8 @@ public:
         return std::is_partitioned(begin(), end(), pre);
     }
 
+    virtual void bind(void*) {} // signal bind, see mixin
+
 private:
     sparse_container sparse_;
     packed_container packed_;

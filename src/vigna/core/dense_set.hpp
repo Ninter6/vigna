@@ -206,6 +206,8 @@ class dense_set {
     }
 
 public:
+    using allocator_type = Alloc;
+    using value_type = T;
     using iterator = detail::dense_set_it_warp<node_t, node_deref>;
     using const_iterator = iterator;
     using reverse_iterator = std::reverse_iterator<iterator>;

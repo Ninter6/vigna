@@ -50,7 +50,7 @@ struct input_iterator_pointer {
     using reference = T&;
 
     constexpr input_iterator_pointer() = default;
-    constexpr explicit input_iterator_pointer(T&& inner) : inner(std::forward<T>(inner)) {}
+    constexpr explicit input_iterator_pointer(T&& inner) : inner(std::move(inner)) {}
 
     reference operator*() {
         return inner;
@@ -60,10 +60,10 @@ struct input_iterator_pointer {
     }
 
     pointer operator->() {
-        return &inner;
+        return std::addressof(inner);
     }
     std::add_const_t<pointer> operator->() const {
-        return &inner;
+        return std::addressof(inner);
     }
 
     value_type inner;
@@ -79,8 +79,8 @@ struct packed_iterator {
     using iterator_category = std::input_iterator_tag;
 
     constexpr packed_iterator() = default;
-    constexpr explicit packed_iterator(It&& it, Args&&... args)
-    : it(std::forward<It>(it), std::forward<Args>(args)...) {}
+    constexpr explicit packed_iterator(const It& it, Args const& ... args)
+        : it(it, args...) {}
 
     template <size_t...I>
     constexpr decltype(auto) _get(std::index_sequence<I...>) const {return std::forward_as_tuple(*std::get<I>(it)...);}
@@ -102,6 +102,39 @@ struct packed_iterator {
     inner_type it;
 };
 
+template <class It, class Fn>
+struct filter_iterator {
+    using value_type = std::decay_t<decltype(*std::declval<It>())>;
+    using pointer = value_type*;
+    using reference = value_type&;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::input_iterator_tag;
+
+    constexpr filter_iterator() = default;
+    constexpr filter_iterator(const It& it_, const It& end_, const Fn& fn_)
+        : it(it_), end(end_), fn(fn_) { if (it != end && !fn(*it)) ++*this; }
+    constexpr filter_iterator(const It& it_, const It& end_, Fn&& fn_ = Fn{})
+        : it(it_), end(end_), fn(std::move(fn_)) { if (it != end && !fn(*it)) ++*this; }
+
+    decltype(auto) operator*() const {return *it;}
+    pointer operator->() const {return std::addressof(*it);}
+    filter_iterator& operator++() {
+        assert(it != end);
+        do ++it; while (it != end && !fn(*it));
+        return *this;
+    }
+    filter_iterator operator++(int) {
+        auto cp = *this; return ++it, cp;
+    }
+    template <class Fn_>
+    bool operator==(const filter_iterator<It, Fn_>& other) const {return it == other.it;}
+    template <class Fn_>
+    bool operator!=(const filter_iterator<It, Fn_>& other) const {return it != other.it;}
+
+    It it, end;
+    Fn fn;
+};
+
 template <class It, class Fn = std::identity>
 struct transform_iterator {
     using value_type = std::invoke_result_t<Fn, decltype(*std::declval<It>())>;
@@ -111,7 +144,10 @@ struct transform_iterator {
     using iterator_category = std::input_iterator_tag;
 
     constexpr transform_iterator() = default;
-    constexpr explicit transform_iterator(It&& it, Fn&& fn = Fn{}) : it(std::forward<It>(it)), fn(std::forward<Fn>(fn)) {}
+    constexpr explicit transform_iterator(const It& it, const Fn& fn)
+        : it(it), fn(fn) {}
+    constexpr explicit transform_iterator(const It& it, Fn&& fn = Fn{})
+        : it(it), fn(std::move(fn)) {}
 
     decltype(auto) operator*() const {return fn(*it);}
     pointer operator->() const {return fn(*it);}

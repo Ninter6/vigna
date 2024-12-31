@@ -72,7 +72,7 @@ public:
     basic_signal_mixin() { auto_connect(); }
     explicit basic_signal_mixin(owner_type* owner) : owner_(owner) { auto_connect(); }
 
-    void bind(registry_type& owner) { owner_ = &owner; }
+    void bind(void* owner) override { assert(owner), owner_ = static_cast<owner_type*>(owner); }
 
     auto on_construct() { return sink_type{construction_}; }
     auto on_destroy() { return sink_type{destruction_}; }
@@ -102,7 +102,9 @@ public:
     template <class First_, class Last_, class...Args>
     auto insert(First_&& first, Last_&& last, Args&&...args) {
         auto from = underlying_type::size();
-        underlying_type::insert(first, last, std::forward<Args>(args)...);
+        underlying_type::insert(std::forward<First_>(first),
+                                std::forward<Last_>(last),
+                                std::forward<Args>(args)...);
         if(auto &reg = owner_or_assert(); !construction_.empty())
             for(const auto to = underlying_type::size(); from != to; ++from)
                 construction_.emit(reg, underlying_type::operator[](from));
@@ -116,10 +118,10 @@ public:
     }
 
     template<class...Func>
-    decltype(auto) patch(const entity_type entt, Func&&...func) {
-        underlying_type::patch(entt, std::forward<Func>(func)...);
-        update_.emit(owner_or_assert(), entt);
-        return this->get(entt);
+    decltype(auto) patch(const entity_type entity, Func&&...func) {
+        underlying_type::patch(entity, std::forward<Func>(func)...);
+        update_.emit(owner_or_assert(), entity);
+        return this->get(entity);
     }
 
 private:

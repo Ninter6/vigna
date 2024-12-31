@@ -2,6 +2,7 @@
 #include <set>
 #include <list>
 #include <ranges>
+#include <source_location>
 
 #include <vigna.hpp>
 
@@ -56,7 +57,7 @@ int main() {
 
     using tl = vigna::reflect::type_list<int, float, char, std::string, double>;
     vigna::reflect::type_list_element_t<3, tl> str = "114514";
-    std::cout << str << std::endl;
+    std::cout << str << ' ' << vigna::reflect::type_list_find_v<std::string, tl> << std::endl;
 
     auto call = [](int a, int b) { std::cout << "signal: " << a << ' ' << b << '\n'; };
     vigna::signal<vigna::delegate<int, int>> signal;
@@ -76,6 +77,14 @@ int main() {
 
     auto e3 = registry.create(traits::construct(0, 810));
     std::cout << traits::version(e3) << std::endl;
+
+    for (auto&& i : arr | vigna::view::filter([](auto&& i) { return i != 1; }))
+        std::cout << i;
+    std::endl(std::cout);
+
+    registry.emplace<int>(e3, 114514);
+    auto& val = registry.emplace_or_replace<int>(e3, 1919810);
+    std::cout << val << std::endl;
 
     return 0;
 }
