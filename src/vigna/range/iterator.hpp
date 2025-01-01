@@ -138,10 +138,10 @@ struct filter_iterator {
     filter_iterator operator++(int) {
         auto cp = *this; return ++it, cp;
     }
-    template <class Fn_>
-    bool operator==(const filter_iterator<It, Fn_>& other) const {return it == other.it;}
-    template <class Fn_>
-    bool operator!=(const filter_iterator<It, Fn_>& other) const {return it != other.it;}
+    template <class It_, class Fn_>
+    bool operator==(const filter_iterator<It_, Fn_>& other) const {return it == other.it;}
+    template <class It_, class Fn_>
+    bool operator!=(const filter_iterator<It_, Fn_>& other) const {return it != other.it;}
 
     It it, end;
     Fn fn;
@@ -170,10 +170,10 @@ struct transform_iterator {
     transform_iterator operator++(int) {auto cp = *this; return ++it, cp;}
     transform_iterator& operator--() {return --it, *this;}
     transform_iterator operator--(int) {auto cp = *this; return --it, cp;}
-    template <class Fn_>
-    bool operator==(const transform_iterator<It, Fn_>& other) const {return it == other.it;}
-    template <class Fn_>
-    bool operator!=(const transform_iterator<It, Fn_>& other) const {return it != other.it;}
+    template <class It_, class Fn_>
+    bool operator==(const transform_iterator<It_, Fn_>& other) const {return it == other.it;}
+    template <class It_, class Fn_>
+    bool operator!=(const transform_iterator<It_, Fn_>& other) const {return it != other.it;}
 
     It it;
     Fn fn;
@@ -194,8 +194,12 @@ struct common_iterator {
     template<class T, class =
         std::enable_if_t<std::is_same_v<std::decay_t<T>, It> || std::is_same_v<std::decay_t<T>, Sen>>>
     explicit common_iterator(T&& it) : inner(it) {
-        deref_ = [](const inner_type& it) -> result_type { return *std::get<std::decay_t<T>>(it); };
-        inc_ = [](const inner_type& it) { ++std::get<std::decay_t<T>>(it); };
+        deref_ = [](const inner_type& it) -> result_type {
+            if constexpr (std::is_same_v<T, It> || std::is_same_v<result_type, decltype(*std::get<std::decay_t<T>>(it))>)
+                return *std::get<std::decay_t<T>>(it);
+            else assert(false && "try to deref sentinel(end iterator)");
+        };
+        inc_ = [](inner_type& it) { ++std::get<std::decay_t<T>>(it); };
         equal_ = [](const inner_type& a, const inner_type& b) -> bool {
             struct overload {
                 bool operator()(const It& o) { return t == o; }
@@ -215,7 +219,7 @@ struct common_iterator {
 
     inner_type inner;
     result_type (*deref_)(const inner_type&);
-    void (*inc_)(const inner_type&);
+    void (*inc_)(inner_type&);
     bool (*equal_)(const inner_type&, const inner_type&);
 };
 
