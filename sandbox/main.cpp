@@ -47,7 +47,7 @@ int main() {
         std::cout << i;
     std::cout << std::endl;
 
-    auto view = vigna::view::pack(vigna::view::iota() | vigna::view::take(4), arr) | vigna::view::transform([](auto&& i) { return std::get<1>(i); });
+    auto view = vigna::view::pack(vigna::view::iota() | vigna::view::take(4), arr) | vigna::view::transform([](auto&& i) { return std::get<1>(i); }) | vigna::view::common;
     std::copy(view.begin(), view.end(), std::ostream_iterator<int>(std::cout, " "));
     std::endl(std::cout);
 
@@ -91,10 +91,15 @@ int main() {
     registry.emplace<double>(e4, 114514);
     registry.patch<double>(e4, [](auto&& v) { v = 8.10; });
 
-    auto view1 = registry.view<int, double>();
+    auto view1 = std::as_const(registry).view<int, double>();
     for (auto&& [vigna, i, d] : view1.each()) {
-        std::cout << "entity[" << traits::id(vigna) << "]: " << i << " " << d << '\n';
+        std::cout << "entity[" << traits::id(vigna) << "]: " << i << ' ' << d << '\n';
     }
+
+    view1.for_each([](auto&& e, auto&&...args) {
+        ((std::cout << args << ' '), ...);
+        std::cout << "from entity[" << traits::id(e) << "]\n";
+    });
 
     return 0;
 }

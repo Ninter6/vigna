@@ -6,8 +6,20 @@
 
 #include <limits>
 #include <tuple>
+#include <variant>
+
+#include "range.hpp"
 
 namespace vigna::range {
+
+namespace detail {
+
+struct default_filter {
+    template <class T>
+    constexpr bool operator()(T&&) const { return true; }
+};
+
+}
 
 template <class T, class = std::enable_if_t<std::is_integral_v<T>>>
 struct iota_iterator {
@@ -102,9 +114,9 @@ struct packed_iterator {
     inner_type it;
 };
 
-template <class It, class Fn>
+template <class It, class Fn = detail::default_filter>
 struct filter_iterator {
-    using value_type = std::decay_t<decltype(*std::declval<It>())>;
+    using value_type = std::remove_reference_t<decltype(*std::declval<It>())>;
     using pointer = value_type*;
     using reference = value_type&;
     using difference_type = std::ptrdiff_t;
@@ -135,7 +147,7 @@ struct filter_iterator {
     Fn fn;
 };
 
-template <class It, class Fn = std::identity>
+template <class It, class Fn = identity>
 struct transform_iterator {
     using value_type = std::invoke_result_t<Fn, decltype(*std::declval<It>())>;
     using pointer = input_iterator_pointer<value_type>;
@@ -149,7 +161,10 @@ struct transform_iterator {
     constexpr explicit transform_iterator(const It& it, Fn&& fn = Fn{})
         : it(it), fn(std::move(fn)) {}
 
-    decltype(auto) operator*() const {return fn(*it);}
+    decltype(auto) operator*() const {
+        if constexpr (std::is_same_v<Fn, identity>) return *it;
+        else return fn(*it);
+    }
     pointer operator->() const {return fn(*it);}
     transform_iterator& operator++() {return ++it, *this;}
     transform_iterator operator++(int) {auto cp = *this; return ++it, cp;}
@@ -162,6 +177,46 @@ struct transform_iterator {
 
     It it;
     Fn fn;
+};
+
+template <class It, class Sen, class = std::enable_if_t<is_compatible_iterator_v<It, Sen>>>
+struct common_iterator {
+    using inner_type = std::variant<It, Sen>;
+    using result_type = decltype(*std::declval<It>());
+    using value_type = std::remove_reference_t<result_type>;
+    using pointer = value_type*;
+    using reference = result_type;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::input_iterator_tag;
+
+    common_iterator() = default;
+
+    template<class T, class =
+        std::enable_if_t<std::is_same_v<std::decay_t<T>, It> || std::is_same_v<std::decay_t<T>, Sen>>>
+    explicit common_iterator(T&& it) : inner(it) {
+        deref_ = [](const inner_type& it) -> result_type { return *std::get<std::decay_t<T>>(it); };
+        inc_ = [](const inner_type& it) { ++std::get<std::decay_t<T>>(it); };
+        equal_ = [](const inner_type& a, const inner_type& b) -> bool {
+            struct overload {
+                bool operator()(const It& o) { return t == o; }
+                bool operator()(const Sen& o) { return t == o; }
+                const T& t;
+            } ol{std::get<std::decay_t<T>>(a)};
+            return std::visit(ol, b);
+        };
+    }
+
+    decltype(auto) operator*() const { return deref_(inner); }
+    pointer operator->() const { return std::addressof(deref_(inner)); }
+    common_iterator& operator++() { return inc_(inner), *this; }
+    common_iterator operator++(int) { auto cp = *this; return inc_(inner), cp; }
+    bool operator==(const common_iterator& o) const { return equal_(inner, o.inner); }
+    bool operator!=(const common_iterator& o) const { return !(*this == o); }
+
+    inner_type inner;
+    result_type (*deref_)(const inner_type&);
+    void (*inc_)(const inner_type&);
+    bool (*equal_)(const inner_type&, const inner_type&);
 };
 
 }

@@ -7,3 +7,4 @@
 #include "range.hpp"
 #include "iterator.hpp"
 #include "view.hpp"
+#include "algo.hpp"

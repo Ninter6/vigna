@@ -39,11 +39,11 @@ class basic_registry {
 
     using hash_value = entity_underlying_type;
     using pool_container_type = dense_map<hash_value, std::shared_ptr<base_type>,
-        std::identity, std::equal_to<hash_value>,
+        std::hash<hash_value>, std::equal_to<hash_value>,
         typename alloc_traits::template rebind_alloc<std::pair<const hash_value, std::shared_ptr<base_type>>>>;
 
     template <class T>
-    using storage_for_type = detail::storage_for_t<T, Entity, typename alloc_traits::template rebind_alloc<T>>;
+    using storage_for_type = detail::storage_for_t<T, Entity, typename alloc_traits::template rebind_alloc<std::remove_const_t<T>>>;
 
     template<class T>
     static constexpr auto type_hash() { return reflect::type_hash<T, hash_value>(); }
@@ -78,13 +78,13 @@ protected:
             assert(id == type_hash<Entity>() && "User entity storage not allowed");
             return &entities_;
         } else {
-            using storage_type = storage_for_type<T>;
+            using storage_type = storage_for_type<const T>;
 
             auto it = pools_.find(id);
-            if (it == pools_.end()) return nullptr;
+            if (it == pools_.end()) return static_cast<storage_type*>(nullptr);
 
             assert(dynamic_cast<storage_type*>(&*it->second) != nullptr && "Unexpected storage type");
-            return static_cast<storage_type&>(&*it->second);
+            return static_cast<storage_type*>(&*it->second);
         }
     }
 
@@ -322,7 +322,7 @@ public:
 
     template<class...Get, class...Exclude>
     auto view(exclude_t<Exclude...> = exclude_t<>{}) const {
-        using view_type = basic_view<base_type, get_t<std::add_const_t<storage_for_type<Get>>...>, exclude_t<std::add_const_t<storage_for_type<Exclude>>...>>;
+        using view_type = basic_view<std::add_const_t<base_type>, get_t<std::add_const_t<storage_for_type<Get>>...>, exclude_t<std::add_const_t<storage_for_type<Exclude>>...>>;
         return view_type{assure<Get>()..., assure<Exclude>()...};
     }
 

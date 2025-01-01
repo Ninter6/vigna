@@ -23,9 +23,9 @@ class basic_view;
 template <class T, size_t Get, size_t Exclude>
 class basic_common_view {
 
-    auto get_subrange() const {
-        assert(get(index) != nullptr);
-        return *get(index) | view::filter([&](auto&& e) { return contains(e); });
+    auto get_iterable() const {
+        const auto& iterable = index != Get ? (*get(index) | view::all) : range::subrange<typename T::iterator>{};
+        return view::filter(iterable, [&](auto&& e) { return contains(e); });
     }
 
 protected:
@@ -46,12 +46,12 @@ public:
     basic_common_view(const std::array<common_type*, Get>& get, const std::array<common_type*, Exclude>& exclude)
         : get_(get), exclude_(exclude) { refresh(); }
 
-    auto begin() const { return get_subrange().begin(); }
-    auto end() const { return get_subrange().end(); }
+    auto begin() const { return get_iterable().begin(); }
+    auto end() const { return get_iterable().end(); }
 
     void refresh() {
-        if (Get < 2) return;
         index = 0;
+        if (Get < 2) return;
         for (size_t i = 0; i < Get; ++i) {
             if (get_[i] == nullptr) {
                 index = Get;
@@ -137,8 +137,16 @@ public:
 
     auto each() const {
         return view::transform(*this, [&](auto&& e) {
-            return std::tuple_cat(std::forward_as_tuple(e),
+            return std::tuple_cat(std::make_tuple(e),
                                   get_as_tuple<index_of<typename Get::element_type>>(e)...);
+        });
+    }
+
+    template<class Fn, class = std::enable_if_t<
+        std::is_invocable_v<Fn, entity_type, typename Get::element_type...>>>
+    auto for_each(Fn&& fn) const {
+        return range::for_each(each(), [&](auto&& tp) {
+            std::apply(std::forward<Fn>(fn), tp);
         });
     }
 

@@ -62,6 +62,20 @@ constexpr struct all_t : view_factory {
     }
 } all{};
 
+constexpr struct common_t : view_factory {
+    template <class T, class = is_range_t<T>>
+    constexpr auto operator()(T&& rg) const {
+        using It = std::decay_t<decltype(begin(rg))>;
+        using Sen = std::decay_t<decltype(end(rg))>;
+        if constexpr (std::is_same_v<It, Sen>) {
+            return all(rg);
+        } else {
+            using common_it = common_iterator<It, Sen>;
+            return subrange{common_it{begin(rg)}, common_it{end(rg)}};
+        }
+    }
+} common{};
+
 constexpr struct take_t {
     template <class T, class = void>
     struct impl_func;
