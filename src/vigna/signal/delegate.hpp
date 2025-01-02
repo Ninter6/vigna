@@ -57,7 +57,7 @@ public:
     template <class Fn_, class = std::enable_if_t<std::is_invocable_v<Fn_, Args...>>>
     explicit delegate(Fn_&& fn) { connect(std::forward<Fn_>(fn)); }
 
-    template<class Alloc, class = std::enable_if_t<!std::is_same_v<bool, delegate>>> // a bug of Apple Clang
+    template<class Alloc, class = std::enable_if_t<!std::is_same_v<bool, delegate>>>
     explicit delegate(const Alloc& alloc) : connected_(std::allocate_shared<bool>(alloc))
     { static_assert(std::is_same_v<bool, typename std::allocator_traits<Alloc>::value_type>); }
 

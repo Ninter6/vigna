@@ -149,9 +149,13 @@ struct filter_iterator {
 
 template <class It, class Fn = identity>
 struct transform_iterator {
+    using inner_it_value_t = decltype(*std::declval<It>());
     using value_type = std::invoke_result_t<Fn, decltype(*std::declval<It>())>;
-    using pointer = input_iterator_pointer<value_type>;
-    using reference = value_type;
+    using pointer = input_iterator_pointer<std::decay_t<value_type>>;
+    using reference = std::conditional_t<
+            std::is_rvalue_reference_v<inner_it_value_t> ||
+            std::is_same_v<inner_it_value_t, std::decay_t<inner_it_value_t>>,
+        std::decay_t<value_type>, value_type>;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::input_iterator_tag;
 
@@ -161,10 +165,7 @@ struct transform_iterator {
     constexpr explicit transform_iterator(const It& it, Fn&& fn = Fn{})
         : it(it), fn(std::move(fn)) {}
 
-    decltype(auto) operator*() const {
-        if constexpr (std::is_same_v<Fn, identity>) return *it;
-        else return fn(*it);
-    }
+    reference operator*() const {return fn(*it);}
     pointer operator->() const {return fn(*it);}
     transform_iterator& operator++() {return ++it, *this;}
     transform_iterator operator++(int) {auto cp = *this; return ++it, cp;}
@@ -200,27 +201,18 @@ struct common_iterator {
             else assert(false && "try to deref sentinel(end iterator)");
         };
         inc_ = [](inner_type& it) { ++std::get<std::decay_t<T>>(it); };
-        equal_ = [](const inner_type& a, const inner_type& b) -> bool {
-            struct overload {
-                bool operator()(const It& o) { return t == o; }
-                bool operator()(const Sen& o) { return t == o; }
-                const T& t;
-            } ol{std::get<std::decay_t<T>>(a)};
-            return std::visit(ol, b);
-        };
     }
 
     decltype(auto) operator*() const { return deref_(inner); }
     pointer operator->() const { return std::addressof(deref_(inner)); }
     common_iterator& operator++() { return inc_(inner), *this; }
     common_iterator operator++(int) { auto cp = *this; return inc_(inner), cp; }
-    bool operator==(const common_iterator& o) const { return equal_(inner, o.inner); }
+    bool operator==(const common_iterator& o) const { return std::visit([](auto&& a, auto&& b) { return a == b; }, inner, o.inner); }
     bool operator!=(const common_iterator& o) const { return !(*this == o); }
 
     inner_type inner;
-    result_type (*deref_)(const inner_type&);
     void (*inc_)(inner_type&);
-    bool (*equal_)(const inner_type&, const inner_type&);
+    result_type (*deref_)(const inner_type&);
 };
 
 }

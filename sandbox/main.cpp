@@ -1,8 +1,6 @@
 #include <iostream>
-#include <set>
+#include <iterator>
 #include <list>
-#include <ranges>
-#include <source_location>
 
 #include <vigna.hpp>
 
@@ -11,8 +9,6 @@ int main() {
 
     vigna::dense_map<int, float> map;
     map[114] = 514.f;
-
-    vigna::dense_map<int, float>::const_iterator it = map.begin();
 
     std::cout << std::as_const(map)[114] << std::endl;
 

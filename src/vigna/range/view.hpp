@@ -135,7 +135,7 @@ constexpr struct transform_t {
     struct impl_obj : view_factory {
         template <class T, class = std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
         constexpr auto operator()(T&& rg) const {
-            return subrange{transform_iterator{begin(rg), std::move(const_cast<impl_obj*>(this)->fn)}, transform_iterator{end(rg)}};
+            return subrange{transform_iterator{begin(rg), std::move(const_cast<impl_obj*>(this)->fn)}, transform_iterator{end(rg), identity{}}};
         }
         template <class Fn_>
         constexpr explicit impl_obj(Fn_&& fn) : fn(std::forward<Fn_>(fn)) {}
@@ -145,7 +145,7 @@ constexpr struct transform_t {
     template <class T, class Fn, class =
         std::enable_if_t<is_range_v<T> && std::is_invocable_v<Fn, decltype(*begin(std::declval<T>()))>>>
     constexpr auto operator()(T&& rg, Fn&& fn) const {
-        return subrange{transform_iterator{begin(rg), std::forward<Fn>(fn)}, transform_iterator{end(rg)}};
+        return subrange{transform_iterator{begin(rg), std::forward<Fn>(fn)}, transform_iterator{end(rg), identity{}}}; // disable copy-cons which may case error
     }
     template <class Fn>
     constexpr auto operator()(Fn&& fn) const { return impl_obj<Fn>{std::forward<Fn>(fn)}; }

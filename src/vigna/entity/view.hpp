@@ -79,7 +79,6 @@ private:
 template <class Common, class...Get, class...Exclude>
 class basic_view<Common, get_t<Get...>, exclude_t<Exclude...>> : basic_common_view<Common, sizeof...(Get), sizeof...(Exclude)> {
     using base_type = basic_common_view<Common, sizeof...(Get), sizeof...(Exclude)>;
-    using common_type = Common;
 
     using get_list = get_t<Get...>;
     using exclude_list = exclude_t<Exclude...>;
