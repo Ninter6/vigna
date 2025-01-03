@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <string_view>
 
 #include "vigna/config.h"
@@ -11,7 +12,7 @@
 namespace vigna::reflect {
 
 namespace detail {
-static inline size_t type_index_curr = 0;
+static inline std::atomic_size_t type_index_curr = 0;
 }
 
 template <class>
@@ -33,10 +34,10 @@ constexpr auto type_name() {
 
 template <class T, class HashValue = size_t>
 constexpr HashValue type_hash() {
-    auto name = type_name<T>();
+    constexpr auto name = type_name<T>();
     size_t hash_value = 14695981039346656037u;
 
-    if (name.empty())
+    if constexpr (name.empty())
         return static_cast<HashValue>(type_index<T>());
 
     for (auto&& c : name) {

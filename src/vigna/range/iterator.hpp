@@ -194,25 +194,22 @@ struct common_iterator {
 
     template<class T, class =
         std::enable_if_t<std::is_same_v<std::decay_t<T>, It> || std::is_same_v<std::decay_t<T>, Sen>>>
-    explicit common_iterator(T&& it) : inner(it) {
-        deref_ = [](const inner_type& it) -> result_type {
-            if constexpr (std::is_same_v<T, It> || std::is_same_v<result_type, decltype(*std::get<std::decay_t<T>>(it))>)
-                return *std::get<std::decay_t<T>>(it);
-            else assert(false && "try to deref sentinel(end iterator)");
-        };
-        inc_ = [](inner_type& it) { ++std::get<std::decay_t<T>>(it); };
-    }
+    explicit common_iterator(T&& it) : inner(std::forward<T>(it)) {}
 
-    decltype(auto) operator*() const { return deref_(inner); }
+    decltype(auto) operator*() const {
+        return std::visit([](auto&& it) -> result_type {
+            if constexpr (std::is_same_v<result_type, decltype(*it)>)
+                return *it;
+            else assert(false && "Invalid dereferencing");
+        }, inner);
+    }
     pointer operator->() const { return std::addressof(deref_(inner)); }
-    common_iterator& operator++() { return inc_(inner), *this; }
+    common_iterator& operator++() { return std::visit([](auto&&i){++i;}, inner), *this; }
     common_iterator operator++(int) { auto cp = *this; return inc_(inner), cp; }
     bool operator==(const common_iterator& o) const { return std::visit([](auto&& a, auto&& b) { return a == b; }, inner, o.inner); }
     bool operator!=(const common_iterator& o) const { return !(*this == o); }
 
     inner_type inner;
-    void (*inc_)(inner_type&);
-    result_type (*deref_)(const inner_type&);
 };
 
 }
