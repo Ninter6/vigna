@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vector>
+#include <cassert>
 
 #include "compressed_pair.hpp"
 
@@ -324,7 +325,7 @@ public:
         return at(key);
     }
 
-    [[nodiscard]] bool contains(const value_t& key) const { return find(key) != end(); }
+    [[nodiscard]] bool contains(const Key& key) const { return find(key) != end(); }
 
     [[nodiscard]] value_t& front() { return packed_.first().front().value; }
     [[nodiscard]] value_t& back() { return packed_.first()[length_ - 1].value; }
